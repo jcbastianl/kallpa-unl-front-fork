@@ -61,6 +61,30 @@ export const NAV_DATA = [
           },
         ],
       },
+      {
+        title: "Participantes",
+        icon: Icons.Alphabet,
+        url: "/pages/participant",
+        items: [],
+      },
+      {
+        title: "Medidas Antro",
+        icon: Icons.Alphabet,
+        items: [
+          {
+            title: "Registrar",
+            url: "/pages/anthropometric",
+          },
+          {
+            title: "Historial",
+            url: "/pages/anthropometric/record",
+          },
+          {
+            title: "Mediciones",
+            url: "/pages/anthropometric/measurements",
+          },
+        ],
+      },
     ],
   },
   {
