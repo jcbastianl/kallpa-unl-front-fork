@@ -31,7 +31,7 @@ export const createInitiation = async (data: InitiationRequest): Promise<ApiResp
   return response;
 };
 
-// Búsqueda segura por DNI (POST en vez de GET por seguridad)
+// Búsqueda segura por DNI 
 export const searchParticipantByDni = async (dni: string): Promise<Participant | null> => {
   try {
     const response = await postWithAuth<ApiResponse<Participant>, { dni: string }>("/users/search", { dni });

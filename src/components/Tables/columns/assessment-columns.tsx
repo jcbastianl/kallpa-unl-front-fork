@@ -11,7 +11,8 @@ export const assessmentColumns = (
   {
     header: "Participante",
     accessor: (a) => {
-      const initials = a.participant_name
+      const name = a.participant_name || "Sin nombre";
+      const initials = name
         .split(" ")
         .map((n) => n[0])
         .join("")
@@ -25,7 +26,7 @@ export const assessmentColumns = (
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-bold leading-tight text-dark dark:text-white">
-              {a.participant_name}
+              {name}
             </span>
           </div>
         </div>

@@ -35,9 +35,9 @@ export function AnthropometricForm() {
 
   const filteredParticipants = participants.filter(
     (p) =>
-      p.firstName.toLowerCase().includes(search.toLowerCase()) ||
-      p.lastName.toLowerCase().includes(search.toLowerCase()) ||
-      p.dni.includes(search),
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      (p.lastName?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
+      (p.dni?.includes(search) ?? false),
   );
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,8 +45,10 @@ export function AnthropometricForm() {
 
     const data: AssessmentData = {
       participant_external_id: participants.find(
-        (p) => `${p.firstName} ${p.lastName}` === selectedParticipant,
-      )?.external_id!,
+        (p) => `${p.name}${p.lastName ? " " + p.lastName : ""}` === selectedParticipant,
+      )?.external_id || String(participants.find(
+        (p) => `${p.name}${p.lastName ? " " + p.lastName : ""}` === selectedParticipant,
+      )?.id),
       date,
       weight,
       height,
@@ -394,15 +396,15 @@ export function AnthropometricForm() {
           {filteredParticipants.length > 0 ? (
             filteredParticipants.map((p) => (
               <li
-                key={p.external_id}
+                key={p.id}
                 className="cursor-pointer border-b border-gray-300 py-2 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
                 onClick={() => {
-                  setSelectedParticipant(`${p.firstName} ${p.lastName}`);
+                  setSelectedParticipant(`${p.name}${p.lastName ? " " + p.lastName : ""}`);
                   clearFieldError("participant_external_id");
                   setIsModalOpen(false);
                 }}
               >
-                {p.firstName} {p.lastName} - {p.dni}
+                {p.name} {p.lastName || ""} {p.dni ? `- ${p.dni}` : ""}
               </li>
             ))
           ) : (

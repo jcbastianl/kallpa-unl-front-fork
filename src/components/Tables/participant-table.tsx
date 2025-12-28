@@ -13,7 +13,7 @@ export function ParticipantsTable({
     <TableBase
       columns={participantColumns}
       data={data}
-      rowKey={(p) => p.external_id}
+      rowKey={(p) => String(p.id)}
     />
   );
 }

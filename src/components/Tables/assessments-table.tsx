@@ -21,7 +21,7 @@ export function AssessmentsTable({ data }: { data: AssessmentTableData[] }) {
   ];
   const filteredData = useMemo(() => {
     return data.filter((item) => {
-      const matchesName = item.participant_name
+      const matchesName = (item.participant_name || "")
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
 
