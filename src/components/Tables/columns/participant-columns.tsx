@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 export const participantColumns: Column<Participant>[] = [
   {
     header: "Nombre",
-    accessor: (p) => `${p.name}${p.lastName ? " " + p.lastName : ""}`,
+    accessor: (p) => `${p.firstName}${p.lastName ? " " + p.lastName : ""}`,
   },
   {
     header: "Email",

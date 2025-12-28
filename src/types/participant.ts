@@ -1,7 +1,7 @@
 export interface Participant {
   id: number;
   external_id?: string;
-  name: string;
+  firstName: string;
   lastName?: string;
   email: string | null;
   status?: string;
