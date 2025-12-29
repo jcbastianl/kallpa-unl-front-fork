@@ -10,7 +10,7 @@ export const NAV_DATA = [
         items: [
           {
             title: "eCommerce",
-            url: "/",
+            url: "/dashboard",
           },
         ],
       },
@@ -111,16 +111,6 @@ export const NAV_DATA = [
           {
             title: "Buttons",
             url: "/ui-elements/buttons",
-          },
-        ],
-      },
-      {
-        title: "Authentication",
-        icon: Icons.Authentication,
-        items: [
-          {
-            title: "Sign In",
-            url: "/auth/sign-in",
           },
         ],
       },

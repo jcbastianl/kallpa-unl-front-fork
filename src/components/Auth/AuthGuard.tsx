@@ -8,12 +8,18 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    const publicPaths = ["/auth/sign-in", "/auth/sign-up"];
+    // Rutas públicas (login y registro)
+    const publicPaths = ["/", "/auth/sign-in", "/auth/sign-up"];
     const isPublicPath = publicPaths.includes(pathname);
     const token = localStorage.getItem("token");
 
     if (!token && !isPublicPath) {
-      router.push("/auth/sign-in");
+      // Si no hay token y no es una ruta pública, redirigir al login
+      router.push("/");
+      setAuthorized(false);
+    } else if (token && isPublicPath) {
+      // Si hay token y está en una ruta pública (login), redirigir al dashboard
+      router.push("/dashboard");
       setAuthorized(false);
     } else {
       setAuthorized(true);

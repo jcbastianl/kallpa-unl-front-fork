@@ -51,7 +51,7 @@ export default function SigninWithPassword() {
           localStorage.setItem("user", JSON.stringify(response.user));
         }
 
-        router.push("/");
+        router.push("/dashboard");
       } else {
         setError(response.msg || "Credenciales incorrectas");
       }
