@@ -1,20 +1,19 @@
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import type { Metadata } from "next";
-import { AnthropometricForm } from "@/components/Forms/anthropometric-form";
+import { AssignTest } from "@/components/Forms/evolution/assign-test";
 export const metadata: Metadata = {
-  title: "Anthropometric Measurements Page",
+  title: "Assessment Test Page",
 };
 
-export default async function MeasurementsPage() {
+export default async function AssignTestPage() {
   return (
     <div className="mx-auto w-full max-w-[1080px]">
-      <Breadcrumb pageName="Historial Medidas antropométricas" />
+      <Breadcrumb pageName="Aplicar Test" />
       <div className="grid grid-cols-1 gap-9">
         <div className="flex flex-col gap-9">
-          <AnthropometricForm />
+          <AssignTest />
         </div>
       </div>
     </div>
   );
-};
-
+}

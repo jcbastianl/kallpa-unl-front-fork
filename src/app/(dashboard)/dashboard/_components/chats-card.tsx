@@ -18,7 +18,7 @@ export async function ChatsCard() {
         {data.map((chat, key) => (
           <li key={key}>
             <Link
-              href="/"
+              href="/dashboard"
               className="flex items-center gap-4.5 px-7.5 py-3 outline-none hover:bg-gray-2 focus-visible:bg-gray-2 dark:hover:bg-dark-2 dark:focus-visible:bg-dark-2"
             >
               <div className="relative shrink-0">

@@ -10,7 +10,7 @@ export const NAV_DATA = [
         items: [
           {
             title: "eCommerce",
-            url: "/",
+            url: "/dashboard",
           },
         ],
       },
@@ -69,19 +69,33 @@ export const NAV_DATA = [
       },
       {
         title: "Medidas Antro",
-        icon: Icons.Alphabet,
+        icon: Icons.TapeMeasureIcon,
         items: [
           {
             title: "Registrar",
-            url: "/pages/anthropometric",
+            url: "/anthropometric/form",
+          },
+          {
+            title: "Lista",
+            url: "/anthropometric/record",
           },
           {
             title: "Historial",
-            url: "/pages/anthropometric/record",
+            url: "/anthropometric/measurements",
+          },
+        ],
+      },
+      {
+        title: "Evaluaciones",
+        icon: Icons.DumbbellIcon,
+        items: [
+          {
+            title: "Registrar Test",
+            url: "/evolution/form-test",
           },
           {
-            title: "Mediciones",
-            url: "/pages/anthropometric/measurements",
+            title: "Asignar Test",
+            url: "/evolution/assign-test",
           },
         ],
       },
@@ -111,16 +125,6 @@ export const NAV_DATA = [
           {
             title: "Buttons",
             url: "/ui-elements/buttons",
-          },
-        ],
-      },
-      {
-        title: "Authentication",
-        icon: Icons.Authentication,
-        items: [
-          {
-            title: "Sign In",
-            url: "/auth/sign-in",
           },
         ],
       },

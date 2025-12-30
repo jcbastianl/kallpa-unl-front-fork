@@ -186,3 +186,47 @@ export function ArrowLeftIcon(props: PropsType) {
     </svg>
   );
 }
+export function DumbbellIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={24}
+      height={24}
+      {...props}
+    >
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <rect x="2" y="10" width="2" height="4" />
+      <rect x="20" y="10" width="2" height="4" />
+      <rect x="0" y="9" width="2" height="6" />
+      <rect x="22" y="9" width="2" height="6" />
+    </svg>
+  );
+}
+export function TapeMeasureIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={24}
+      height={24}
+      {...props}
+    >
+      <path d="M4 6h16v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z" />
+      <path d="M8 6v4" />
+      <path d="M12 6v6" />
+      <path d="M16 6v4" />
+    </svg>
+  );
+}
+
