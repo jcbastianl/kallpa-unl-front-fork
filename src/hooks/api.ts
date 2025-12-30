@@ -3,6 +3,7 @@ import { get, post, postWithAuth } from "./apiUtils";
 import type { Participant, InitiationRequest } from "@/types/participant";
 import { AssessmentData, AssessmentResponseData } from "@/types/assessment";
 import type { LoginRequest, LoginResponse } from "@/types/auth";
+import { RegisterTestFormData, TestData, TestListItem, TestResponseData } from "@/types/test";
 
 // ==================== AUTH ====================
 
@@ -57,4 +58,32 @@ export const getRecords = async (): Promise<AssessmentResponseData[]> => {
     "/list-assessment"
   );
   return response.data;
+};
+
+// ==================== TEST FORMULARIOS ====================
+export const getTests = async (): Promise<TestListItem[]> => {
+  const response = await get<ApiResponse<TestListItem[]>>("/list-test");
+  return response.data;
+};
+
+export const saveTest = async (
+  data: TestData,
+): Promise<ApiResponse<TestResponseData>> => {
+  const response = await post<ApiResponse<TestResponseData>, TestData>(
+    "/save-test",
+    data,
+  );
+
+  return response;
+};
+
+export const registerForm = async (
+  data: RegisterTestFormData,
+): Promise<ApiResponse<any>> => {
+  const response = await post<ApiResponse<any>, RegisterTestFormData>(
+    "/apply_test",
+    data
+  );
+
+  return response;
 };

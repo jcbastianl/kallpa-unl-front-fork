@@ -12,6 +12,7 @@ export interface AssessmentResponseData extends AssessmentData {
   external_id: string;
   age: number;
   participant_name: string;
+  height: number;
 }
 export interface AssessmentTableData {
   participant_external_id: string;
@@ -20,5 +21,10 @@ export interface AssessmentTableData {
   date: string;
   age: number;
   bmi: number;
+  dni?: number;
   status: string;
+  height: number;
+  weight: number;
+  waistPerimeter: number;
+  wingspan: number;
 }

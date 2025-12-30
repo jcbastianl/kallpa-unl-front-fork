@@ -85,6 +85,20 @@ export const NAV_DATA = [
           },
         ],
       },
+      {
+        title: "Evaluaciones",
+        icon: Icons.DumbbellIcon,
+        items: [
+          {
+            title: "Registrar Test",
+            url: "/evolution/form-test",
+          },
+          {
+            title: "Asignar Test",
+            url: "/evolution/assign-test",
+          },
+        ],
+      },
     ],
   },
   {
