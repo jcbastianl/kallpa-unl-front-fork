@@ -7,11 +7,11 @@ export const metadata: Metadata = {
   title: "Anthropometric Measurements Page",
 };
 
-export default async function AnthropometricPage() {
+export default async function RecordPage() {
   const assessments = await getRecords();
   return (
     <div className="mx-auto w-full max-w-[1080px]">
-      <Breadcrumb pageName="Historial Medidas Antropométricas" />
+      <Breadcrumb pageName="Lista Medidas Antropométricas" />
       <div className="space-y-10">
         <AssessmentsTable data={assessments} />
       </div>

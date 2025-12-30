@@ -396,7 +396,7 @@ export function AnthropometricForm() {
           {filteredParticipants.length > 0 ? (
             filteredParticipants.map((p) => (
               <li
-                key={p.id}
+                key={p.external_id}
                 className="cursor-pointer border-b border-gray-300 py-2 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
                 onClick={() => {
                   setSelectedParticipant(`${p.firstName}${p.lastName ? " " + p.lastName : ""}`);

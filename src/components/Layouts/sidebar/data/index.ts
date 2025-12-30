@@ -69,19 +69,19 @@ export const NAV_DATA = [
       },
       {
         title: "Medidas Antro",
-        icon: Icons.Alphabet,
+        icon: Icons.TapeMeasureIcon,
         items: [
           {
             title: "Registrar",
-            url: "/pages/anthropometric",
+            url: "/anthropometric/form",
+          },
+          {
+            title: "Lista",
+            url: "/anthropometric/record",
           },
           {
             title: "Historial",
-            url: "/pages/anthropometric/record",
-          },
-          {
-            title: "Mediciones",
-            url: "/pages/anthropometric/measurements",
+            url: "/anthropometric/measurements",
           },
         ],
       },

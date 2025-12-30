@@ -85,7 +85,11 @@ export const assessmentColumns = (
       <div className="flex items-center justify-end gap-x-4 text-gray-400">
         <button
           className="transition-colors hover:text-dark dark:hover:text-white"
-          onClick={() => navigate("/pages/anthropometric/measurements")}
+          onClick={() =>
+            navigate(
+              `/anthropometric/measurements/${a.participant_external_id}`
+            )
+          }
         >
           <PreviewIcon />
         </button>

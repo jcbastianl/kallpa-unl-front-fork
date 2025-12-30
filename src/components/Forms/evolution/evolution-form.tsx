@@ -1,7 +1,6 @@
 "use client";
 import { FiActivity } from "react-icons/fi";
-import { RegisterTestFormData, TestData } from "@/types/test";
-import { useState } from "react";
+import { TestData } from "@/types/test";
 import DatePickerTwo from "@/components/FormElements/DatePicker/DatePickerTwo";
 interface EvolutionTestFormProps {
   test: TestData | null;
@@ -15,7 +14,6 @@ interface EvolutionTestFormProps {
 }
 export function EvolutionTestForm({
   test,
-  participantExternalId,
   values,
   setValues,
   observations,

@@ -13,7 +13,7 @@ import { login } from "@/hooks/api";
  */
 export default function SigninWithPassword() {
   const router = useRouter();
-  
+
   const [data, setData] = useState({
     email: process.env.NEXT_PUBLIC_DEMO_USER_MAIL || "",
     password: process.env.NEXT_PUBLIC_DEMO_USER_PASS || "",
@@ -46,7 +46,7 @@ export default function SigninWithPassword() {
 
       if (response.token) {
         localStorage.setItem("token", response.token);
-        
+
         if (response.user) {
           localStorage.setItem("user", JSON.stringify(response.user));
         }
@@ -65,15 +65,14 @@ export default function SigninWithPassword() {
   return (
     <form onSubmit={handleSubmit}>
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-500 dark:bg-red-900/20">
+        <div className="mb-4 rounded-lg border border-red-500/50 bg-red-900/20 p-4 text-sm text-red-500">
           {error}
         </div>
       )}
-
       <InputGroup
         type="email"
-        label="Email"
-        className="mb-4 [&_input]:py-[15px]"
+        label=""
+        className="mb-4 [&_input]:border-slate-700 [&_input]:bg-[#0f172a] [&_input]:py-[15px] [&_input]:text-white focus:[&_input]:border-[#5e5ce6]"
         placeholder="Enter your email"
         name="email"
         handleChange={handleChange}
@@ -83,8 +82,8 @@ export default function SigninWithPassword() {
 
       <InputGroup
         type="password"
-        label="Password"
-        className="mb-5 [&_input]:py-[15px]"
+        label=""
+        className="mb-5 [&_input]:border-slate-700 [&_input]:bg-[#0f172a] [&_input]:py-[15px] [&_input]:text-white focus:[&_input]:border-[#5e5ce6]"
         placeholder="Enter your password"
         name="password"
         handleChange={handleChange}
@@ -93,23 +92,26 @@ export default function SigninWithPassword() {
       />
 
       <div className="mb-6 flex items-center justify-between gap-2 py-2 font-medium">
-        <Checkbox
-          label="Remember me"
-          name="remember"
-          withIcon="check"
-          minimal
-          radius="md"
-          onChange={(e) =>
-            setData({
-              ...data,
-              remember: e.target.checked,
-            })
-          }
-        />
+        {/* Color de texto para el checkbox y link */}
+        <div className="text-sm text-slate-400">
+          <Checkbox
+            label="Remember me"
+            name="remember"
+            withIcon="check"
+            minimal
+            radius="md"
+            onChange={(e) =>
+              setData({
+                ...data,
+                remember: e.target.checked,
+              })
+            }
+          />
+        </div>
 
         <Link
           href="/auth/forgot-password"
-          className="hover:text-primary dark:text-white dark:hover:text-primary"
+          className="text-sm text-slate-400 transition-colors hover:text-[#5e5ce6]"
         >
           Forgot Password?
         </Link>
@@ -118,13 +120,24 @@ export default function SigninWithPassword() {
       <div className="mb-4.5">
         <button
           type="submit"
-          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary p-4 font-medium text-white transition hover:bg-opacity-90"
+          disabled={loading}
+          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#5e5ce6] p-4 font-medium text-white shadow-lg shadow-indigo-500/20 transition hover:bg-opacity-90"
         >
-          Sign In
+          {loading ? "Cargando..." : "Sign In"}
           {loading && (
-            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-t-transparent dark:border-primary dark:border-t-transparent" />
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-t-transparent" />
           )}
         </button>
+      </div>
+
+      <div className="mt-6 text-center text-sm text-slate-400">
+        Don't have any account?{" "}
+        <Link
+          href="/auth/sign-up"
+          className="font-semibold text-[#5e5ce6] hover:underline"
+        >
+          Sign Up
+        </Link>
       </div>
     </form>
   );

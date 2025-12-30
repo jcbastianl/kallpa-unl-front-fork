@@ -44,19 +44,31 @@ export const searchParticipantByDni = async (dni: string): Promise<Participant |
 
 // ==================== MEDIDAS ANTROPOMÉTRICAS ====================
 export const saveAssessment = async (
-  data: AssessmentData
+  data: AssessmentData,
 ): Promise<ApiResponse<AssessmentResponseData>> => {
-  const response = await post<ApiResponse<AssessmentResponseData>, AssessmentData>(
-    "/save-assessment",
-    data
-  );
+  const response = await post<
+    ApiResponse<AssessmentResponseData>,
+    AssessmentData
+  >("/save-assessment", data);
   return response;
 };
 
 export const getRecords = async (): Promise<AssessmentResponseData[]> => {
-  const response = await get<ApiResponse<AssessmentResponseData[]>>(
-    "/list-assessment"
-  );
+  const response =
+    await get<ApiResponse<AssessmentResponseData[]>>("/list-assessment");
+  return response.data;
+};
+
+export const getAssessmentsByParticipant = async (
+  participantExternalId: string,
+) => {
+  const response = await get<
+    ApiResponse<{
+      participant: Participant;
+      assessments: AssessmentResponseData[];
+    }>
+  >(`/participants/${participantExternalId}/assessments`);
+
   return response.data;
 };
 
