@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const apiClient = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL,
+    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
     headers: {
         "Content-Type": "application/json",
     },
@@ -49,13 +49,6 @@ export const postWithAuth = async <T, B>(url: string, data: B): Promise<T> => {
       return response.data;
     } catch (error: any) {
       if (error.response) {
-        // Si es 401, podríamos redirigir al login
-        if (error.response.status === 401) {
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('token');
-            window.location.href = '/auth/sign-in';
-          }
-        }
         return error.response.data;
       }
       throw error;

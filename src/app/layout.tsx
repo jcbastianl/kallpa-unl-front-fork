@@ -4,7 +4,6 @@ import "@/css/style.css";
 import "flatpickr/dist/flatpickr.min.css";
 import "jsvectormap/dist/jsvectormap.css";
 
-import AuthGuard from "@/components/Auth/AuthGuard";
 import type { Metadata } from "next";
 import NextTopLoader from "nextjs-toploader";
 import type { PropsWithChildren } from "react";
@@ -25,9 +24,7 @@ export default function RootLayout({ children }: PropsWithChildren) {
       <body>
         <Providers>
           <NextTopLoader color="#5750F1" showSpinner={false} />
-          <AuthGuard>
-            {children}
-          </AuthGuard>
+          {children}
         </Providers>
       </body>
     </html>

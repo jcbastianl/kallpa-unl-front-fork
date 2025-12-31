@@ -1,25 +1,31 @@
-// src/types/auth.ts
+export interface User {
+  external: string;
+  stament: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  photo?: string;
+  token: string;
+}
+
+export interface LoginResponse {
+  data: User;
+  message: string;
+  errors: any[];
+  status: "success" | "error";
+}
 
 export interface LoginRequest {
   email: string;
   password: string;
 }
 
-export interface LoginResponse {
-  status: string;
-  token: string;
-  user: {
-    email: string;
-    stament?: string; 
-    nombre?: string;
-    apellido?: string;
-  };
-  msg: string;
-}
-
 export interface AuthUser {
+  external: string;
+  stament: string;
+  first_name: string;
+  last_name: string;
   email: string;
-  stament?: string;
-  nombre?: string;
-  apellido?: string;
+  photo?: string;
+  token: string;
 }

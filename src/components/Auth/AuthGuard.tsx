@@ -1,33 +1,28 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
-  const [authorized, setAuthorized] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Rutas públicas (login y registro)
-    const publicPaths = ["/", "/auth/sign-in", "/auth/sign-up"];
-    const isPublicPath = publicPaths.includes(pathname);
     const token = localStorage.getItem("token");
 
-    if (!token && !isPublicPath) {
-      // Si no hay token y no es una ruta pública, redirigir al login
-      router.push("/");
-      setAuthorized(false);
-    } else if (token && isPublicPath) {
-      // Si hay token y está en una ruta pública (login), redirigir al dashboard
-      router.push("/dashboard");
-      setAuthorized(false);
+    if (!token) {
+      router.push("/auth/sign-in");
     } else {
-      setAuthorized(true);
+      setIsAuthenticated(true);
     }
-  }, [router, pathname]);
+  }, [router]);
 
-  if (!authorized) {
-    return null;
+  // Mientras verificamos, mostramos un loader para evitar el "flash"
+  if (!isAuthenticated) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-white dark:bg-boxdark">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      </div>
+    );
   }
 
   return <>{children}</>;
