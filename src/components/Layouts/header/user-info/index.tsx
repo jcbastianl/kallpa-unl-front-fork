@@ -7,15 +7,28 @@ import {
   DropdownTrigger,
 } from "@/components/ui/dropdown";
 import { cn } from "@/lib/utils";
+import { AuthUser } from "@/types/auth";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LogOutIcon, SettingsIcon, UserIcon } from "./icons";
 
 export function UserInfo() {
   const [isOpen, setIsOpen] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
+    }
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -24,11 +37,19 @@ export function UserInfo() {
     router.push("/");
   };
 
-  const USER = {
-    name: "John Smith",
-    email: "johnson@nextadmin.com",
-    img: "/images/user/user-03.png",
+  const userName = user ? `${user.first_name} ${user.last_name}` : "Usuario";
+  const userEmail = user?.email || "";
+  
+  // Validar que la foto sea una URL válida (absoluta o relativa con /)
+  const getValidImageUrl = (photo?: string) => {
+    if (!photo) return "/images/user/user-03.png";
+    if (photo.startsWith("/") || photo.startsWith("http://") || photo.startsWith("https://")) {
+      return photo;
+    }
+    return "/images/user/user-03.png";
   };
+  
+  const userImg = getValidImageUrl(user?.photo);
 
   return (
     <Dropdown isOpen={isOpen} setIsOpen={setIsOpen}>
@@ -37,15 +58,15 @@ export function UserInfo() {
 
         <figure className="flex items-center gap-3">
           <Image
-            src={USER.img}
-            className="size-12"
-            alt={`Avatar of ${USER.name}`}
+            src={userImg}
+            className="size-12 rounded-full object-cover"
+            alt={`Avatar of ${userName}`}
             role="presentation"
             width={200}
             height={200}
           />
           <figcaption className="flex items-center gap-1 font-medium text-dark dark:text-dark-6 max-[1024px]:sr-only">
-            <span>{USER.name}</span>
+            <span>{userName}</span>
 
             <ChevronUpIcon
               aria-hidden
@@ -67,9 +88,9 @@ export function UserInfo() {
 
         <figure className="flex items-center gap-2.5 px-5 py-3.5">
           <Image
-            src={USER.img}
-            className="size-12"
-            alt={`Avatar for ${USER.name}`}
+            src={userImg}
+            className="size-12 rounded-full object-cover"
+            alt={`Avatar for ${userName}`}
             role="presentation"
             width={200}
             height={200}
@@ -77,10 +98,10 @@ export function UserInfo() {
 
           <figcaption className="space-y-1 text-base font-medium">
             <div className="mb-2 leading-none text-dark dark:text-white">
-              {USER.name}
+              {userName}
             </div>
 
-            <div className="leading-none text-gray-6">{USER.email}</div>
+            <div className="leading-none text-gray-6">{userEmail}</div>
           </figcaption>
         </figure>
 
