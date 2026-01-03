@@ -55,8 +55,15 @@ export const attendanceService = {
     });
   },
 
-  // Obtener participantes
+  // Obtener participantes (solo participantes activos, sin docentes/staff) - para registro de asistencia
   async getParticipants() {
+    return axios.get(`${API_URL}/users/participants`, {
+      headers: getHeaders(),
+    });
+  },
+
+  // Obtener todos los usuarios (incluye profesores y staff) - para página de participantes
+  async getAllUsers() {
     return axios.get(`${API_URL}/users`, {
       headers: getHeaders(),
     });
@@ -74,11 +81,12 @@ export const attendanceService = {
   },
 
   // Obtener historial de asistencia
-  async getHistory(startDate?: string, endDate?: string, scheduleId?: string) {
+  async getHistory(startDate?: string, endDate?: string, scheduleId?: string, day?: string) {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
     if (scheduleId) params.append('scheduleId', scheduleId);
+    if (day && day !== 'Todos los días') params.append('day', day);
     
     return axios.get(`${API_URL}/attendance/history?${params.toString()}`, {
       headers: getHeaders(),

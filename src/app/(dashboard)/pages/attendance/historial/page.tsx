@@ -45,7 +45,7 @@ export default function Historial() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
-  const [filterDay, setFilterDay] = useState('');
+  const [filterDay, setFilterDay] = useState('Todos los días');
 
   useEffect(() => {
     loadData();
@@ -55,12 +55,12 @@ export default function Historial() {
     if (dateFrom && dateTo) {
       loadHistory();
     }
-  }, [dateFrom, dateTo]);
+  }, [dateFrom, dateTo, filterDay]);
 
   const loadData = async () => {
     try {
       const [historyRes, schedulesRes] = await Promise.all([
-        attendanceService.getHistory(dateFrom, dateTo),
+        attendanceService.getHistory(dateFrom, dateTo, undefined, filterDay),
         attendanceService.getSchedules()
       ]);
       
@@ -106,7 +106,7 @@ export default function Historial() {
 
   const loadHistory = async () => {
     try {
-      const res = await attendanceService.getHistory(dateFrom, dateTo);
+      const res = await attendanceService.getHistory(dateFrom, dateTo, undefined, filterDay);
       const rawHistory = res.data.data || [];
       const normalizedHistory = normalizeHistoryData(rawHistory);
       setHistory(normalizedHistory);
@@ -153,15 +153,8 @@ export default function Historial() {
     ? Math.round((totalPresent / (totalPresent + totalAbsent)) * 100)
     : 0;
 
-  const filteredHistory = history.filter(h => {
-    if (filterDay) {
-      const dayOfWeek = (h.day_of_week || '').toLowerCase();
-      if (dayOfWeek !== filterDay.toLowerCase()) {
-        return false;
-      }
-    }
-    return true;
-  });
+  // Ya no necesitamos filtrar en frontend, el backend filtra por día
+  const filteredHistory = history;
 
   if (loading) return <Loading />;
 
@@ -194,14 +187,14 @@ export default function Historial() {
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Día</label>
             <select value={filterDay} onChange={(e) => setFilterDay(e.target.value)} className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white">
-              <option value="">Todos los días</option>
-              <option value="monday">Lunes</option>
-              <option value="tuesday">Martes</option>
-              <option value="wednesday">Miércoles</option>
-              <option value="thursday">Jueves</option>
-              <option value="friday">Viernes</option>
-              <option value="saturday">Sábado</option>
-              <option value="sunday">Domingo</option>
+              <option value="Todos los días">Todos los días</option>
+              <option value="Lunes">Lunes</option>
+              <option value="Martes">Martes</option>
+              <option value="Miércoles">Miércoles</option>
+              <option value="Jueves">Jueves</option>
+              <option value="Viernes">Viernes</option>
+              <option value="Sábado">Sábado</option>
+              <option value="Domingo">Domingo</option>
             </select>
           </div>
         </div>

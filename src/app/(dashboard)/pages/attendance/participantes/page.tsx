@@ -46,14 +46,15 @@ export default function Participantes() {
 
   const loadParticipants = async () => {
     try {
-      const res = await attendanceService.getParticipants();
+      // Usar getAllUsers para obtener todos los usuarios incluyendo profesores
+      const res = await attendanceService.getAllUsers();
       const rawData = res.data.data || [];
       const normalized = rawData.map(p => ({
         ...p,
         id: p.external_id || p.id,
         name: p.name || `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim(),
         status: (p.status === 'active' || p.status === 'ACTIVO') ? 'ACTIVO' : 'INACTIVO',
-        type: p.type || 'ESTUDIANTE'
+        type: p.type?.toUpperCase() || 'ESTUDIANTE'
       })) as Participant[];
       setParticipants(normalized);
     } catch (error) {
@@ -68,11 +69,11 @@ export default function Participantes() {
 
     if (filterType === 'ESTUDIANTE') {
       filtered = filtered.filter(p => 
-        p.type === 'ESTUDIANTE' || p.type === 'PARTICIPANTE' || p.type === 'STUDENT'
+        ['PARTICIPANTE', 'ESTUDIANTE', 'INICIACION', 'STUDENT'].includes(p.type?.toUpperCase())
       );
     } else if (filterType === 'PROFESOR') {
       filtered = filtered.filter(p => 
-        p.type === 'PROFESOR' || p.type === 'DOCENTE' || p.type === 'TEACHER'
+        p.type?.toUpperCase() === 'PROFESOR'
       );
     }
 
@@ -98,16 +99,16 @@ export default function Participantes() {
   };
 
   const isTeacher = (type: string) => {
-    return type === 'PROFESOR' || type === 'TEACHER' || type === 'DOCENTE';
+    return type?.toUpperCase() === 'PROFESOR';
   };
 
   const students = participants.filter(p => 
-    p.type === 'ESTUDIANTE' || p.type === 'PARTICIPANTE' || p.type === 'STUDENT'
+    ['PARTICIPANTE', 'ESTUDIANTE', 'INICIACION', 'STUDENT'].includes(p.type?.toUpperCase())
   ).length;
   const professors = participants.filter(p => 
-    p.type === 'PROFESOR' || p.type === 'DOCENTE' || p.type === 'TEACHER'
+    p.type?.toUpperCase() === 'PROFESOR'
   ).length;
-  const active = participants.filter(p => p.status === 'ACTIVO').length;
+  const active = participants.filter(p => p.status?.toUpperCase() === 'ACTIVO').length;
 
   if (loading) return <Loading />;
 

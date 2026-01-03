@@ -229,45 +229,18 @@ export default function Registro() {
               </div>
             </div>
           ) : (
-            // Vista completa con selectores
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            // Mensaje para seleccionar desde Dashboard
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-yellow-600">info</span>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sesión *</label>
-                  <select
-                    value={selectedSchedule}
-                    onChange={(e) => setSelectedSchedule(e.target.value)}
-                    required
-                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                  >
-                    <option value="">Seleccionar sesión...</option>
-                    {schedules.map(s => (
-                      <option key={String(s.id)} value={String(s.id)}>
-                        {s.name} - {s.day_of_week} ({s.start_time} - {s.end_time})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha *</label>
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    required
-                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              {selectedScheduleData && (
-                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <p className="text-sm text-blue-800 dark:text-blue-400">
-                    <strong>{selectedScheduleData.name}</strong> • {selectedScheduleData.day_of_week} • {selectedScheduleData.start_time} - {selectedScheduleData.end_time}
+                  <p className="font-medium text-yellow-800 dark:text-yellow-300">Selecciona una sesión desde el Dashboard</p>
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                    Ve al Dashboard y haz clic en "Registrar Asistencia" en la sesión que deseas registrar.
                   </p>
                 </div>
-              )}
-            </>
+              </div>
+            </div>
           )}
         </div>
 

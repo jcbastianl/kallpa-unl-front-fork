@@ -13,7 +13,10 @@ const DAYS_OF_WEEK = [
   { value: 'Jueves', label: 'Jueves' },
   { value: 'Viernes', label: 'Viernes' },
   { value: 'Sábado', label: 'Sábado' },
+  { value: 'Domingo', label: 'Domingo' },
 ];
+
+type SessionType = 'recurring' | 'specific';
 
 function Loading() {
   return (
@@ -28,6 +31,7 @@ export default function Programar() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [sessionType, setSessionType] = useState<SessionType>('recurring');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -35,8 +39,13 @@ export default function Programar() {
     start_time: '08:00',
     end_time: '09:00',
     location: '',
-    max_capacity: 30,
-    description: ''
+    capacity: 30,
+    description: '',
+    // Campos para sesión recurrente
+    start_date: '',
+    end_date: '',
+    // Campo para sesión con fecha específica
+    specific_date: ''
   });
 
   useEffect(() => {
@@ -90,7 +99,27 @@ export default function Programar() {
     setSaving(true);
 
     try {
-      await attendanceService.createSchedule(formData);
+      // Construir datos según el tipo de sesión
+      const dataToSend: any = {
+        name: formData.name,
+        start_time: formData.start_time,
+        end_time: formData.end_time,
+        location: formData.location || undefined,
+        capacity: formData.capacity,
+        description: formData.description || undefined,
+      };
+
+      if (sessionType === 'recurring') {
+        // Sesión recurrente (semanal)
+        dataToSend.day_of_week = formData.day_of_week;
+        if (formData.start_date) dataToSend.start_date = formData.start_date;
+        if (formData.end_date) dataToSend.end_date = formData.end_date;
+      } else {
+        // Sesión con fecha específica
+        dataToSend.specific_date = formData.specific_date;
+      }
+
+      await attendanceService.createSchedule(dataToSend);
       alert('Sesión creada correctamente');
       router.push('/pages/attendance/sesiones');
     } catch (error) {
@@ -143,21 +172,90 @@ export default function Programar() {
               />
             </div>
 
+            {/* Tipo de sesión */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Día de la semana *</label>
-              <select
-                name="day_of_week"
-                value={formData.day_of_week}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-              >
-                <option value="">Seleccionar día...</option>
-                {DAYS_OF_WEEK.map(d => (
-                  <option key={d.value} value={d.value}>{d.label}</option>
-                ))}
-              </select>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de sesión *</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="sessionType"
+                    value="recurring"
+                    checked={sessionType === 'recurring'}
+                    onChange={() => setSessionType('recurring')}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Recurrente (se repite cada semana)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="sessionType"
+                    value="specific"
+                    checked={sessionType === 'specific'}
+                    onChange={() => setSessionType('specific')}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Fecha específica (única vez)</span>
+                </label>
+              </div>
             </div>
+
+            {/* Campos según tipo de sesión */}
+            {sessionType === 'recurring' ? (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Día de la semana *</label>
+                  <select
+                    name="day_of_week"
+                    value={formData.day_of_week}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                  >
+                    <option value="">Seleccionar día...</option>
+                    {DAYS_OF_WEEK.map(d => (
+                      <option key={d.value} value={d.value}>{d.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha inicio (opcional)</label>
+                    <input
+                      type="date"
+                      name="start_date"
+                      value={formData.start_date}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha fin (opcional)</label>
+                    <input
+                      type="date"
+                      name="end_date"
+                      value={formData.end_date}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha de la sesión *</label>
+                <input
+                  type="date"
+                  name="specific_date"
+                  value={formData.specific_date}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">El día de la semana se calculará automáticamente</p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -197,11 +295,11 @@ export default function Programar() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Capacidad máxima</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Capacidad</label>
               <input
                 type="number"
-                name="max_capacity"
-                value={formData.max_capacity}
+                name="capacity"
+                value={formData.capacity}
                 onChange={handleChange}
                 min="1"
                 max="100"

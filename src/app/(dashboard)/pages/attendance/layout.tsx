@@ -6,7 +6,6 @@ import type { PropsWithChildren } from 'react';
 
 const navItems = [
   { path: '/pages/attendance', label: 'Dashboard', icon: 'dashboard' },
-  { path: '/pages/attendance/sesiones', label: 'Sesiones', icon: 'event' },
   { path: '/pages/attendance/participantes', label: 'Participantes', icon: 'group' },
   { path: '/pages/attendance/historial', label: 'Historial', icon: 'history' },
   { path: '/pages/attendance/programar', label: 'Programar', icon: 'calendar_month' },
