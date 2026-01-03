@@ -119,7 +119,51 @@ export function AnthropometricForm() {
     setStatus("");
     setErrors({});
   };
+  const getBmiColors = () => {
+    switch (status) {
+      case "Bajo peso":
+        return {
+          text: "text-yellow-400",
+          icon: "text-yellow-500",
+          bar: "bg-yellow-400",
+          glow: "bg-yellow-500/10",
+        };
 
+      case "Peso adecuado":
+        return {
+          text: "text-green-400",
+          icon: "text-green-500",
+          bar: "bg-green-500",
+          glow: "bg-green-500/10",
+        };
+
+      case "Sobrepeso":
+        return {
+          text: "text-red-400",
+          icon: "text-red-500",
+          bar: "bg-red-500",
+          glow: "bg-red-500/10",
+        };
+
+      case "Obesidad":
+        return {
+          text: "text-red-600",
+          icon: "text-red-600",
+          bar: "bg-red-600",
+          glow: "bg-red-600/20",
+        };
+
+      default:
+        return {
+          text: "text-gray-400",
+          icon: "text-gray-400",
+          bar: "bg-gray-400",
+          glow: "bg-transparent",
+        };
+    }
+  };
+
+  
   return (
     <ShowcaseSection
       title={
@@ -153,7 +197,7 @@ export function AnthropometricForm() {
           />
         </div>
       )}
-
+      
       <form
         action="#"
         onSubmit={handleSubmit}
@@ -363,32 +407,27 @@ export function AnthropometricForm() {
               </div>
 
               <div className="flex flex-col items-center gap-2">
-                <div
-                  className={`rounded-xl p-3 shadow-lg ${bmi ? "bg-red-500/20 text-red-500" : "bg-gray-800 text-gray-600"}`}
-                >
-                  <FiActivity size={24} />
-                </div>
-                <span
-                  className={`text-xs font-bold uppercase ${bmi ? "text-red-400" : "text-gray-600"}`}
-                >
+                <FiActivity
+                  size={18}
+                  className={`${getBmiColors().icon} opacity-70`}
+                />
+
+                <span className={`text-xs font-bold uppercase ${getBmiColors().text}`}>
                   {status || "---"}
                 </span>
+
               </div>
             </div>
             <div className="mt-8">
               <div className="relative h-2.5 w-full rounded-full bg-gray-200 dark:bg-gray-800">
                 <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    status === "Bajo peso"
-                      ? "bg-red-500"
-                      : status === "Normal"
-                        ? "bg-green-500"
-                        : "bg-orange-500"
-                  }`}
+                  className={`h-full rounded-full transition-all duration-500 ${getBmiColors().bar}`}
+
                   style={{
                     width: bmi ? `${Math.min((bmi / 40) * 100, 100)}%` : "0%",
                   }}
                 ></div>
+
               </div>
               <div className="mt-3 flex justify-between text-[10px] font-bold uppercase tracking-tighter text-gray-500">
                 <span>Bajo</span>

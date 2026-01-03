@@ -56,17 +56,14 @@ export function AssessmentForm() {
 
     const newErrors: Record<string, string> = {};
 
-    // nombre del test
     if (!payload.name) {
       newErrors.name = "Por favor ingrese el nombre del test";
     }
 
-    // descripción
     if (!payload.description) {
       newErrors.description = "Por favor escriba una descripción";
     }
 
-    // ejercicios
     const hasValidExercise = exercises.some(
       (e) => e.name.trim() && e.unit
     );
