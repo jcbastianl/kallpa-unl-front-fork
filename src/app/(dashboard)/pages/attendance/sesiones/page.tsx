@@ -28,15 +28,34 @@ export default function Sesiones() {
   const loadSchedules = async () => {
     try {
       const res = await attendanceService.getSchedules();
-      const dayMap: Record<string, string> = {
-        'monday': 'LUNES', 'tuesday': 'MARTES', 'wednesday': 'MIERCOLES',
-        'thursday': 'JUEVES', 'friday': 'VIERNES', 'saturday': 'SABADO', 'sunday': 'DOMINGO'
+      
+      // Función para normalizar día (quitar acentos y pasar a mayúsculas)
+      const normalizeDay = (day: string): string => {
+        if (!day) return 'SIN DÍA';
+        const normalized = day.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const dayMap: Record<string, string> = {
+          'monday': 'LUNES', 'lunes': 'LUNES',
+          'tuesday': 'MARTES', 'martes': 'MARTES',
+          'wednesday': 'MIERCOLES', 'miercoles': 'MIERCOLES',
+          'thursday': 'JUEVES', 'jueves': 'JUEVES',
+          'friday': 'VIERNES', 'viernes': 'VIERNES',
+          'saturday': 'SABADO', 'sabado': 'SABADO',
+          'sunday': 'DOMINGO', 'domingo': 'DOMINGO',
+        };
+        return dayMap[normalized] || day.toUpperCase();
       };
+      
       const rawData = res.data.data || [];
-      const normalized = rawData.map(s => ({
-        ...s,
-        day_of_week: dayMap[s.day_of_week?.toLowerCase()] || s.day_of_week?.toUpperCase() || 'SIN DÍA'
-      }));
+      const normalized = rawData.map((s: any) => {
+        const dayFromBackend = s.dayOfWeek || s.day_of_week || '';
+        return {
+          ...s,
+          id: s.external_id || s.id,
+          day_of_week: normalizeDay(dayFromBackend),
+          start_time: s.startTime || s.start_time,
+          end_time: s.endTime || s.end_time,
+        };
+      });
       setSchedules(normalized);
     } catch (error) {
       console.error('Error loading schedules:', error);

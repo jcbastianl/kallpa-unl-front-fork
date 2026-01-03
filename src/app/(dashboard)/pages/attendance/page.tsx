@@ -31,8 +31,10 @@ function Loading() {
 
 export default function DashboardAsistencia() {
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [todaySchedules, setTodaySchedules] = useState<Schedule[]>([]);
   const [upcomingSessions, setUpcomingSessions] = useState<Schedule[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [todayHistory, setTodayHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate] = useState(new Date());
   const [editingSession, setEditingSession] = useState<Schedule | null>(null);
@@ -44,17 +46,34 @@ export default function DashboardAsistencia() {
 
   const loadData = async () => {
     try {
-      const [sessionsRes, participantsRes, schedulesRes] = await Promise.all([
+      // Obtener fecha de hoy en formato YYYY-MM-DD
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      
+      const [sessionsRes, participantsRes, schedulesRes, historyRes] = await Promise.all([
         attendanceService.getSessionsToday(),
         attendanceService.getParticipants(),
-        attendanceService.getSchedules()
+        attendanceService.getSchedules(),
+        attendanceService.getHistory(todayStr, todayStr) // Obtener historial de hoy
       ]);
       const sessionsData = sessionsRes.data.data;
-      setSessions(sessionsData?.sessions || []);
+      const sessionsFromBackend = sessionsData?.sessions || [];
+      setSessions(sessionsFromBackend);
       setParticipants(participantsRes.data.data || []);
       
-      // Obtener próximas sesiones (sesiones programadas para los próximos días)
+      // Guardar el historial de hoy para verificar asistencia
+      const historyData = historyRes.data.data || [];
+      setTodayHistory(historyData);
+      console.log('📜 Today history:', historyData);
+      
+      // Obtener todos los schedules
       const schedules = schedulesRes.data.data || [];
+      
+      // Obtener sesiones de hoy basándose en los schedules
+      const todaySessions = getTodaySessions(schedules);
+      setTodaySchedules(todaySessions);
+      
+      // Obtener próximas sesiones (sesiones programadas para los próximos días)
       const upcoming = getUpcomingSessions(schedules);
       setUpcomingSessions(upcoming);
     } catch (error) {
@@ -64,12 +83,18 @@ export default function DashboardAsistencia() {
     }
   };
 
+  // Función para normalizar día (quitar acentos y pasar a minúsculas)
+  const normalizeDay = (day: string): string => {
+    if (!day) return '';
+    return day.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  };
+
   // Mapeo de días a español
   const dayToSpanish: Record<string, string> = {
     'monday': 'Lunes', 'tuesday': 'Martes', 'wednesday': 'Miércoles',
     'thursday': 'Jueves', 'friday': 'Viernes', 'saturday': 'Sábado', 'sunday': 'Domingo',
-    'lunes': 'Lunes', 'martes': 'Martes', 'miércoles': 'Miércoles', 'miercoles': 'Miércoles',
-    'jueves': 'Jueves', 'viernes': 'Viernes', 'sábado': 'Sábado', 'sabado': 'Sábado', 'domingo': 'Domingo'
+    'lunes': 'Lunes', 'martes': 'Martes', 'miercoles': 'Miércoles',
+    'jueves': 'Jueves', 'viernes': 'Viernes', 'sabado': 'Sábado', 'domingo': 'Domingo'
   };
 
   // Función para parsear fecha en formato YYYY-MM-DD
@@ -78,16 +103,76 @@ export default function DashboardAsistencia() {
     return new Date(year, month - 1, day, 12, 0, 0);
   };
 
+  // Obtener las sesiones de hoy basándose en los schedules
+  const getTodaySessions = (schedules: Schedule[]) => {
+    const daysMap: Record<string, number> = {
+      'domingo': 0, 'sunday': 0,
+      'lunes': 1, 'monday': 1,
+      'martes': 2, 'tuesday': 2,
+      'miercoles': 3, 'wednesday': 3,
+      'jueves': 4, 'thursday': 4,
+      'viernes': 5, 'friday': 5,
+      'sabado': 6, 'saturday': 6,
+    };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayDay = today.getDay();
+    const todayStr = today.toISOString().split('T')[0];
+    const todaySessions: Schedule[] = [];
+
+    schedules.forEach(schedule => {
+      const specificDate = (schedule as any).specific_date || (schedule as any).specificDate;
+      
+      if (specificDate) {
+        // Sesión con fecha específica - verificar si es hoy
+        if (specificDate === todayStr) {
+          todaySessions.push(schedule);
+        }
+      } else {
+        // Sesión recurrente - verificar si el día coincide con hoy
+        const dayName = normalizeDay((schedule as any).day_of_week || (schedule as any).dayOfWeek || '');
+        const scheduleDay = daysMap[dayName];
+        
+        if (scheduleDay === todayDay) {
+          // Validar que hoy esté dentro del rango start_date - end_date
+          const startDateStr = (schedule as any).start_date || (schedule as any).startDate;
+          const endDateStr = (schedule as any).end_date || (schedule as any).endDate;
+          
+          let isWithinRange = true;
+          
+          if (startDateStr) {
+            const startDate = parseDate(startDateStr);
+            startDate.setHours(0, 0, 0, 0);
+            if (today < startDate) isWithinRange = false;
+          }
+          
+          if (endDateStr && isWithinRange) {
+            const endDate = parseDate(endDateStr);
+            endDate.setHours(0, 0, 0, 0);
+            if (today > endDate) isWithinRange = false;
+          }
+          
+          if (isWithinRange) {
+            todaySessions.push(schedule);
+          }
+        }
+      }
+    });
+
+    return todaySessions;
+  };
+
   // Obtener las próximas sesiones de la semana
   const getUpcomingSessions = (schedules: Schedule[]) => {
     const daysMap: Record<string, number> = {
       'domingo': 0, 'sunday': 0,
       'lunes': 1, 'monday': 1,
       'martes': 2, 'tuesday': 2,
-      'miércoles': 3, 'miercoles': 3, 'wednesday': 3,
+      'miercoles': 3, 'wednesday': 3,
       'jueves': 4, 'thursday': 4,
       'viernes': 5, 'friday': 5,
-      'sábado': 6, 'sabado': 6, 'saturday': 6,
+      'sabado': 6, 'saturday': 6,
     };
 
     const today = new Date();
@@ -117,7 +202,7 @@ export default function DashboardAsistencia() {
         }
       } else {
         // Sesión recurrente
-        const dayName = ((schedule as any).day_of_week || (schedule as any).dayOfWeek || '')?.toLowerCase();
+        const dayName = normalizeDay((schedule as any).day_of_week || (schedule as any).dayOfWeek || '');
         const scheduleDay = daysMap[dayName];
         
         if (scheduleDay !== undefined) {
@@ -165,13 +250,16 @@ export default function DashboardAsistencia() {
   };
 
   const handleDelete = async (sessionId: string | number, sessionName: string) => {
-    if (!confirm(`¿Estás seguro de eliminar la sesión "${sessionName}"?\n\nEsta acción eliminará la sesión permanentemente.`)) return;
+    if (!confirm(`¿Estás seguro de eliminar la sesión "${sessionName}"?\n\nEsta acción eliminará:\n• La sesión programada del horario\n• Los registros de asistencia asociados`)) return;
     
     setDeleting(sessionId);
     try {
       await attendanceService.deleteSchedule(sessionId);
+      // Eliminar de todas las listas
       setUpcomingSessions(prev => prev.filter(s => (s.external_id || s.id) !== sessionId));
+      setTodaySchedules(prev => prev.filter(s => ((s as any).external_id || s.id) !== sessionId));
       alert('Sesión eliminada correctamente');
+      loadData(); // Recargar todos los datos
     } catch (error) {
       console.error('Error deleting session:', error);
       alert('Error al eliminar la sesión');
@@ -252,7 +340,7 @@ export default function DashboardAsistencia() {
           icon="event"
           iconBg="bg-blue-100 text-blue-800"
           label="Sesiones Hoy"
-          value={sessions.length}
+          value={todaySchedules.length}
         />
         <StatCard
           icon="group"
@@ -270,7 +358,7 @@ export default function DashboardAsistencia() {
           icon="calendar_month"
           iconBg="bg-purple-100 text-purple-600"
           label="Sesiones Semana"
-          value={sessions.length * 5}
+          value={upcomingSessions.length + todaySchedules.length}
         />
       </div>
 
@@ -286,60 +374,97 @@ export default function DashboardAsistencia() {
           </h2>
         </div>
         <div className="p-6">
-          {sessions.length === 0 ? (
+          {todaySchedules.length === 0 ? (
             <p className="text-gray-500 dark:text-gray-400 text-center py-4">No hay sesiones programadas para hoy</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sessions.map((session) => (
-                <div
-                  key={session.id}
-                  className={`border rounded-lg p-4 transition-colors ${
-                    session.attendance_count > 0 
-                      ? 'border-green-300 bg-green-50 dark:bg-green-900/20' 
-                      : 'border-gray-200 dark:border-gray-600 hover:border-blue-300'
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white">{session.name}</h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{session.program_name}</p>
-                    </div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                      session.attendance_count > 0 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {session.attendance_count > 0 ? '✓ Completada' : 'Pendiente'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    <span className="flex items-center gap-1">
-                      <span className="material-symbols-outlined text-base">calendar_today</span>
-                      {formatShortDate(currentDate)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <span className="material-symbols-outlined text-base">schedule</span>
-                      {session.start_time} - {session.end_time}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="material-symbols-outlined text-base">group</span>
-                      {session.attendance_count}/{session.participant_count}
-                    </span>
-                  </div>
-                  <Link
-                    href={`/pages/attendance/registro?session=${session.schedule_id}`}
-                    className={`mt-3 block w-full text-center py-2 rounded-lg text-sm font-medium transition-colors ${
-                      session.attendance_count > 0
-                        ? 'bg-gray-600 text-white hover:bg-gray-700'
-                        : 'bg-blue-800 text-white hover:bg-blue-900'
+              {todaySchedules.map((schedule) => {
+                const startTime = (schedule as any).start_time || (schedule as any).startTime || '';
+                const endTime = (schedule as any).end_time || (schedule as any).endTime || '';
+                const location = (schedule as any).location || '';
+                const scheduleId = (schedule as any).external_id || schedule.id;
+                
+                // Buscar en el historial de hoy si hay asistencia registrada para esta sesión
+                const historyRecord = todayHistory.find((h: any) => 
+                  h.schedule_id === scheduleId || 
+                  h.scheduleId === scheduleId ||
+                  h.schedule_id === (schedule as any).external_id ||
+                  h.scheduleId === (schedule as any).external_id
+                );
+                
+                const isCompleted = historyRecord && (historyRecord.present_count > 0 || historyRecord.presentCount > 0 || historyRecord.total > 0);
+                const presentCount = historyRecord?.present_count || historyRecord?.presentCount || 0;
+                const totalCount = historyRecord?.total || historyRecord?.total_count || historyRecord?.totalCount || 0;
+                
+                return (
+                  <div
+                    key={scheduleId}
+                    className={`border rounded-lg p-4 transition-colors ${
+                      isCompleted 
+                        ? 'border-green-300 bg-green-50 dark:bg-green-900/20' 
+                        : 'border-gray-200 dark:border-gray-600 hover:border-blue-300'
                     }`}
                   >
-                    {session.attendance_count > 0 ? 'Editar Asistencia' : 'Registrar Asistencia'}
-                  </Link>
-                </div>
-              ))}
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-semibold text-gray-900 dark:text-white">{schedule.name}</h3>
+                        {location && <p className="text-sm text-gray-500 dark:text-gray-400">{location}</p>}
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                        isCompleted 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {isCompleted ? '✓ Completada' : 'Pendiente'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-base">calendar_today</span>
+                        {formatShortDate(currentDate)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-base">schedule</span>
+                        {startTime} - {endTime}
+                      </span>
+                      {isCompleted && (
+                        <span className="flex items-center gap-1">
+                          <span className="material-symbols-outlined text-base">group</span>
+                          {presentCount}/{totalCount}
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Botones de acción */}
+                    <div className="mt-3 flex gap-2">
+                      <Link
+                        href={`/pages/attendance/registro?session=${scheduleId}`}
+                        className={`flex-1 text-center py-2 rounded-lg text-sm font-medium transition-colors ${
+                          isCompleted
+                            ? 'bg-gray-600 text-white hover:bg-gray-700'
+                            : 'bg-blue-800 text-white hover:bg-blue-900'
+                        }`}
+                      >
+                        {isCompleted ? 'Editar Asistencia' : 'Registrar Asistencia'}
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(scheduleId, schedule.name)}
+                        disabled={deleting === scheduleId}
+                        className="px-3 py-2 rounded-lg text-sm font-medium transition-colors bg-red-100 text-red-600 hover:bg-red-200 disabled:opacity-50"
+                        title="Eliminar sesión"
+                      >
+                        {deleting === scheduleId ? (
+                          <span className="material-symbols-outlined text-base animate-spin">refresh</span>
+                        ) : (
+                          <span className="material-symbols-outlined text-base">delete</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

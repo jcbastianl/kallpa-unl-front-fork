@@ -56,16 +56,18 @@ export default function Programar() {
   const normalizeDayOfWeek = (day: string): string => {
     if (!day) return '';
     
+    const dayLower = day.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Normalizar y quitar acentos para comparación
+    
     const dayMap: Record<string, string> = {
-      'monday': 'Lunes', 'lunes': 'Lunes', 'LUNES': 'Lunes',
-      'tuesday': 'Martes', 'martes': 'Martes', 'MARTES': 'Martes',
-      'wednesday': 'Miércoles', 'miercoles': 'Miércoles', 'miércoles': 'Miércoles', 'MIERCOLES': 'Miércoles', 'MIÉRCOLES': 'Miércoles',
-      'thursday': 'Jueves', 'jueves': 'Jueves', 'JUEVES': 'Jueves',
-      'friday': 'Viernes', 'viernes': 'Viernes', 'VIERNES': 'Viernes',
-      'saturday': 'Sábado', 'sabado': 'Sábado', 'sábado': 'Sábado', 'SABADO': 'Sábado', 'SÁBADO': 'Sábado',
-      'sunday': 'Domingo', 'domingo': 'Domingo', 'DOMINGO': 'Domingo',
+      'monday': 'Lunes', 'lunes': 'Lunes',
+      'tuesday': 'Martes', 'martes': 'Martes',
+      'wednesday': 'Miércoles', 'miercoles': 'Miércoles',
+      'thursday': 'Jueves', 'jueves': 'Jueves',
+      'friday': 'Viernes', 'viernes': 'Viernes',
+      'saturday': 'Sábado', 'sabado': 'Sábado',
+      'sunday': 'Domingo', 'domingo': 'Domingo',
     };
-    return dayMap[day.toLowerCase()] || dayMap[day] || day || '';
+    return dayMap[dayLower] || day || '';
   };
 
   const loadSchedules = async () => {
@@ -151,7 +153,7 @@ export default function Programar() {
 
       await attendanceService.createSchedule(dataToSend);
       alert('Sesión creada correctamente');
-      router.push('/pages/attendance/sesiones');
+      router.push('/pages/attendance');
     } catch (error) {
       console.error('Error creating schedule:', error);
       alert('Error al crear la sesión');
