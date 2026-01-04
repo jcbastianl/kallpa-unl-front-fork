@@ -4,16 +4,16 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { attendanceService } from '@/services/attendance.services';
-import type { Schedule } from '@/types/attendance';
+import type { Schedule, Program } from '@/types/attendance';
 
 const DAYS_OF_WEEK = [
-  { value: 'Lunes', label: 'Lunes' },
-  { value: 'Martes', label: 'Martes' },
-  { value: 'Miércoles', label: 'Miércoles' },
-  { value: 'Jueves', label: 'Jueves' },
-  { value: 'Viernes', label: 'Viernes' },
-  { value: 'Sábado', label: 'Sábado' },
-  { value: 'Domingo', label: 'Domingo' },
+  { value: 'monday', label: 'Lunes' },
+  { value: 'tuesday', label: 'Martes' },
+  { value: 'wednesday', label: 'Miércoles' },
+  { value: 'thursday', label: 'Jueves' },
+  { value: 'friday', label: 'Viernes' },
+  { value: 'saturday', label: 'Sábado' },
+  { value: 'sunday', label: 'Domingo' },
 ];
 
 type SessionType = 'recurring' | 'specific';
@@ -31,6 +31,7 @@ export default function Programar() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
   const [sessionType, setSessionType] = useState<SessionType>('recurring');
 
   const [formData, setFormData] = useState({
@@ -41,6 +42,7 @@ export default function Programar() {
     location: '',
     capacity: 30,
     description: '',
+    program_id: '',
     // Campos para sesión recurrente
     start_date: '',
     end_date: '',
@@ -49,67 +51,91 @@ export default function Programar() {
   });
 
   useEffect(() => {
-    loadSchedules();
+    loadData();
   }, []);
 
-  // Mapeo para normalizar días de la semana
+  // Mapeo para normalizar días de la semana a inglés minúscula (formato del backend)
   const normalizeDayOfWeek = (day: string): string => {
     if (!day) return '';
     
-    const dayLower = day.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Normalizar y quitar acentos para comparación
+    const dayLower = day.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     
     const dayMap: Record<string, string> = {
-      'monday': 'Lunes', 'lunes': 'Lunes',
-      'tuesday': 'Martes', 'martes': 'Martes',
-      'wednesday': 'Miércoles', 'miercoles': 'Miércoles',
-      'thursday': 'Jueves', 'jueves': 'Jueves',
-      'friday': 'Viernes', 'viernes': 'Viernes',
-      'saturday': 'Sábado', 'sabado': 'Sábado',
-      'sunday': 'Domingo', 'domingo': 'Domingo',
+      'monday': 'monday', 'lunes': 'monday',
+      'tuesday': 'tuesday', 'martes': 'tuesday',
+      'wednesday': 'wednesday', 'miercoles': 'wednesday',
+      'thursday': 'thursday', 'jueves': 'thursday',
+      'friday': 'friday', 'viernes': 'friday',
+      'saturday': 'saturday', 'sabado': 'saturday',
+      'sunday': 'sunday', 'domingo': 'sunday',
     };
     return dayMap[dayLower] || day || '';
   };
 
-  const loadSchedules = async () => {
+  const loadData = async () => {
     try {
-      const res = await attendanceService.getSchedules();
-      const rawSchedules = res.data.data || [];
+      const [schedulesRes, programsRes] = await Promise.all([
+        attendanceService.getSchedules(),
+        attendanceService.getPrograms()
+      ]);
+      
+      // Procesar programas
+      setPrograms(programsRes.data.data || []);
+      
+      // Procesar schedules
+      const rawSchedules = schedulesRes.data.data || [];
       
       // Debug: Ver qué datos llegan del backend
       console.log('📅 Raw schedules from backend:', rawSchedules);
       
-      // Normalizar los datos del backend
-      const normalizedSchedules = rawSchedules.map((s: any) => {
-        const dayFromBackend = s.dayOfWeek || s.day_of_week;
-        const normalizedDay = normalizeDayOfWeek(dayFromBackend);
-        
-        // Debug: Ver el mapeo de cada schedule
-        console.log(`📋 Schedule "${s.name}": backend day="${dayFromBackend}" → normalized="${normalizedDay}"`);
-        
-        // Si tiene specific_date pero no day_of_week, calcular el día de la semana
-        let finalDay = normalizedDay;
-        const specificDate = s.specific_date || s.specificDate; // Manejar ambos formatos
-        
-        if (!finalDay && specificDate) {
-          // Parsear la fecha correctamente (formato YYYY-MM-DD)
-          const [year, month, day] = specificDate.split('-').map(Number);
-          const date = new Date(year, month - 1, day, 12, 0, 0);
-          const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-          finalDay = dayNames[date.getDay()];
-          console.log(`📋 Schedule "${s.name}": calculated day from specific_date="${specificDate}" → "${finalDay}"`);
-        }
-        
-        return {
-          ...s,
-          id: s.external_id || s.id,
-          day_of_week: finalDay,
-          start_time: s.startTime || s.start_time,
-          end_time: s.endTime || s.end_time,
-          specific_date: specificDate, // Normalizar el campo
-        };
-      });
+      // Fecha de hoy para filtrar
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
       
-      console.log('✅ Normalized schedules:', normalizedSchedules);
+      // Normalizar los datos del backend y filtrar por fechas activas
+      const normalizedSchedules = rawSchedules
+        .map((s: any) => {
+          const dayFromBackend = s.dayOfWeek || s.day_of_week;
+          const normalizedDay = normalizeDayOfWeek(dayFromBackend);
+          
+          // Si tiene specific_date pero no day_of_week, calcular el día de la semana
+          let finalDay = normalizedDay;
+          const specificDate = s.specific_date || s.specificDate;
+          
+          if (!finalDay && specificDate) {
+            const [year, month, day] = specificDate.split('-').map(Number);
+            const date = new Date(year, month - 1, day, 12, 0, 0);
+            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            finalDay = dayNames[date.getDay()];
+          }
+          
+          return {
+            ...s,
+            id: s.external_id || s.id,
+            day_of_week: finalDay,
+            start_time: s.startTime || s.start_time,
+            end_time: s.endTime || s.end_time,
+            specific_date: specificDate,
+            start_date: s.start_date || s.startDate,
+            end_date: s.end_date || s.endDate,
+          };
+        })
+        .filter((s: any) => {
+          // Filtrar sesiones que estén activas (dentro del rango de fechas)
+          const startDate = s.start_date;
+          const endDate = s.end_date;
+          
+          // Si tiene end_date y ya pasó, no mostrar
+          if (endDate && endDate < todayStr) {
+            console.log(`🚫 Schedule "${s.name}" filtered out: end_date (${endDate}) < today (${todayStr})`);
+            return false;
+          }
+          
+          return true;
+        });
+      
+      console.log('✅ Filtered schedules:', normalizedSchedules);
       setSchedules(normalizedSchedules);
     } catch (error) {
       console.error('Error loading schedules:', error);
@@ -139,6 +165,7 @@ export default function Programar() {
         location: formData.location || undefined,
         capacity: formData.capacity,
         description: formData.description || undefined,
+        program_id: formData.program_id || undefined,
       };
 
       if (sessionType === 'recurring') {
@@ -202,6 +229,27 @@ export default function Programar() {
                 placeholder="Ej: Yoga Matutino"
                 className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
               />
+            </div>
+
+            {/* Selector de Programa */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Programa</label>
+              <select
+                name="program_id"
+                value={formData.program_id}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+              >
+                <option value="">Sin programa (general)</option>
+                {programs.map(program => (
+                  <option key={program.external_id} value={program.external_id}>
+                    {program.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Opcional: asocia esta sesión a un programa específico
+              </p>
             </div>
 
             {/* Tipo de sesión */}
