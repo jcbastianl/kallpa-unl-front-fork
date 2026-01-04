@@ -12,6 +12,7 @@ export const UserForm = () => {
     lastName: "",
     dni: "",
     phone: "",
+    address: "",
     email: "",
     password: "",
     role: "" as "DOCENTE" | "PASANTE" | "ADMINISTRADOR" |  "",
@@ -40,6 +41,7 @@ export const UserForm = () => {
         lastName: formData.lastName,
         dni: formData.dni,
         phone: formData.phone || undefined,
+        address: formData.address,
         email: formData.email,
         password: formData.password,
         role: formData.role as "DOCENTE" | "PASANTE" | "ADMINISTRADOR",
@@ -54,6 +56,7 @@ export const UserForm = () => {
         lastName: "",
         dni: "",
         phone: "",
+        address: "",
         email: "",
         password: "",
         role: "",
@@ -139,6 +142,18 @@ export const UserForm = () => {
             />
           </div>
         </div>
+
+        <div className="mb-4.5">
+          <InputGroup
+            label="Dirección"
+            name="address"
+            type="text"
+            placeholder="Ej. Av. Universitaria y Calle Principal"
+            value={formData.address}
+            handleChange={handleChange}
+          />
+        </div>
+
         <div className="mb-4.5 grid grid-cols-1 gap-6 xl:grid-cols-2">
           <div>
             <InputGroup

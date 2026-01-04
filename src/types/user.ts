@@ -3,6 +3,7 @@ export interface CreateUserRequest {
     lastName: string;
     dni: string;
     phone?: string;
+    address: string;
     email: string;
     password: string;
     role: "DOCENTE" | "PASANTE" | "ADMINISTRADOR";
