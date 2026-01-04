@@ -37,10 +37,11 @@ export function UserInfo() {
     router.push("/");
   };
 
-  const userName = user ? `${user.first_name} ${user.last_name}` : "Usuario";
+  const firstName = user?.first_name || user?.firstName || "";
+  const lastName = user?.last_name || user?.lastName || "";
+  const userName = firstName && lastName ? `${firstName} ${lastName}` : user?.email?.split("@")[0] || "Usuario";
   const userEmail = user?.email || "";
   
-  // Validar que la foto sea una URL válida (absoluta o relativa con /)
   const getValidImageUrl = (photo?: string) => {
     if (!photo) return "/images/user/user-03.png";
     if (photo.startsWith("/") || photo.startsWith("http://") || photo.startsWith("https://")) {
