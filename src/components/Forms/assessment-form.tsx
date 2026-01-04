@@ -2,7 +2,7 @@
 import { useState } from "react";
 import InputGroup from "@/components/FormElements/InputGroup";
 import { ShowcaseSection } from "@/components/Layouts/showcase-section";
-import { FiCalendar, FiClipboard, FiPlayCircle, FiSave } from "react-icons/fi";
+import { FiCalendar, FiClipboard, FiEdit, FiSave } from "react-icons/fi";
 import ErrorMessage from "../FormElements/errormessage";
 import { TextAreaGroup } from "../FormElements/InputGroup/text-area";
 import { saveTest } from "@/hooks/api";
@@ -37,7 +37,6 @@ export function AssessmentForm() {
       return newErrors;
     });
   };
-  const resetForm = () => { };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -45,37 +44,13 @@ export function AssessmentForm() {
       name: name.trim(),
       description: description.trim(),
       frequency_months: frequencyMonths,
-      exercises: exercises
-        .filter((e) => e.name && e.unit)
-        .map((e) => ({
-          name: e.name.trim(),
-          unit: e.unit.trim(),
-        })),
+      exercises: exercises.map(e => ({
+        name: e.name.trim(),
+        unit: e.unit.trim(),
+      })),
     };
-    setErrors({}); // limpiar errores anteriores
-
-    const newErrors: Record<string, string> = {};
-
-    if (!payload.name) {
-      newErrors.name = "Por favor ingrese el nombre del test";
-    }
-
-    if (!payload.description) {
-      newErrors.description = "Por favor escriba una descripción";
-    }
-
-    const hasValidExercise = exercises.some(
-      (e) => e.name.trim() && e.unit
-    );
-
-    if (!hasValidExercise) {
-      newErrors.exercises = "Debe asignar nombre y unidad al ejercicio";
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
+    
+    setErrors({});
 
     try {
       setLoading(true);
@@ -88,19 +63,39 @@ export function AssessmentForm() {
           description: "El test se guardó exitosamente",
         });
         setShowAlert(true);
+        setName("");
+        setDescription("");
+        setFrequencyMonths(3);
+        setExercises([{ name: "", unit: "" }]);
         setTimeout(() => setShowAlert(false), 3000);
-        console.log("ID:", res.data.test_external_id);
       } else {
-        setAlertVariant("error");
-        setAlertMessage({
-          title: "Error",
-          description: res.msg,
-        });
-        setShowAlert(true);
-        setTimeout(() => setShowAlert(false), 3000);
+        if (res.msg && typeof res.msg === "object") {
+          // Mapear errores de backend al estado de errors
+          const fieldErrors: Record<string, string> = {};
+          Object.entries(res.msg).forEach(([key, value]) => {
+            // Si es un string directo, lo asignamos
+            if (typeof value === "string") {
+              fieldErrors[key] = value;
+            } else if (Array.isArray(value)) {
+              // Si quieres manejar errores por índice de ejercicio, podrías mapearlos aquí
+              fieldErrors[key] = "Algunos ejercicios son inválidos";
+            }
+          });
+          setErrors(fieldErrors);
+        } else {
+          setAlertVariant("error");
+          setAlertMessage({
+            title: "Error",
+            description:
+              typeof res.msg === "string"
+                ? res.msg
+                : "Error al guardar el test",
+          });
+          setShowAlert(true);
+          setTimeout(() => setShowAlert(false), 3000);
+        }
       }
     } catch (err) {
-      console.error(err);
       setAlertVariant("error");
       setAlertMessage({
         title: "Error",
@@ -114,28 +109,10 @@ export function AssessmentForm() {
   };
   return (
     <ShowcaseSection
-      title={
-        <div className="flex w-full items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FiClipboard className="text-primary" size={20} />
-            <span className="font-semibold">Crear Nuevo Test</span>
-          </div>
-
-          <button
-            type="button"
-            className="dark:border-strokedark flex items-center gap-2 rounded-lg border border-gray-400 bg-transparent px-4 py-1.5 text-sm font-medium text-dark transition hover:bg-white/5 dark:text-white"
-            onClick={() => {
-              console.log("Abrir historial");
-            }}
-          >
-            <FiPlayCircle size={16} />
-            <span>Aplicar Test</span>
-          </button>
-        </div>
-      }
-      className="!p-6.5"
+      icon={<FiEdit size={24} />}
+      title="Registro Nuevo Test"
+      description="Ingresa los datos para crear un nuevo test"
     >
-      {/*alert*/}
       {showAlert && (
         <Alert
           variant={alertVariant}
@@ -190,7 +167,6 @@ export function AssessmentForm() {
                 icon={<FiClipboard className="text-gray-400" size={18} />}
               />
               <ErrorMessage message={errors.name} />
-
             </div>
             <InputGroup
               label="Frecuencia (en meses)"
@@ -212,7 +188,6 @@ export function AssessmentForm() {
               }}
             />
             <ErrorMessage message={errors.description} />
-
           </div>
         </div>
 
@@ -256,7 +231,7 @@ export function AssessmentForm() {
           </div>
 
           <div className="space-y-3">
-            <ErrorMessage message={errors.exercises} />
+          {errors.exercises && <ErrorMessage message={errors.exercises} />}
 
             {exercises.map((exercise, idx) => (
               <div
@@ -278,7 +253,6 @@ export function AssessmentForm() {
 
                     clearFieldError("exercises");
                   }}
-
                 />
                 <Select
                   label="Unidad"
@@ -294,7 +268,6 @@ export function AssessmentForm() {
 
                     clearFieldError("exercises");
                   }}
-
                   placeholder="Seleccionar"
                 />
                 <div className="flex justify-end lg:justify-center lg:pb-3">

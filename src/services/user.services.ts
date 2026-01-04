@@ -24,7 +24,7 @@ export const userService = {
     const result = await response.json();
 
     if (!response.ok || result.status === "error") {
-      throw new Error(result.msg || "Error al crear usuario");
+      throw result;
     }
 
     return result;

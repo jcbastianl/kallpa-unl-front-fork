@@ -1,23 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
-import {
-  getParticipants,
-  getRecords,
-  getTests,
-  registerForm,
-} from "@/hooks/api";
+import { getParticipants, getTests, registerForm } from "@/hooks/api";
 import TestCard from "@/components/Card/test-card";
 import { mapTestFromApi } from "@/utils/map";
 import { Stepper } from "@/components/Stepper/stepper";
-import {
-  AssessmentResponseData,
-  AssessmentTableData,
-} from "@/types/assessment";
 import { EvolutionTable } from "@/components/Tables/evolution-table";
 import { EvolutionTestForm } from "./evolution-form";
 import { Test, TestData } from "@/types/test";
 import { SelectedParticipant } from "@/types/participant";
-
+import Loader from "@/components/Loader/loader";
+import { Alert } from "@/components/ui-elements/alert";
+type AlertState = {
+  type: "success" | "error" | null;
+  message: string;
+};
 export function AssignTest() {
   const [values, setValues] = useState<{ [key: string]: number }>({});
   const [observations, setObservations] = useState("");
@@ -27,6 +23,7 @@ export function AssignTest() {
   const [selectedTestId, setSelectedTestId] = useState<string | number | null>(
     null,
   );
+  const [alert, setAlert] = useState<AlertState>({ type: null, message: "" });
   const [assessments, setAssessments] = useState<SelectedParticipant[]>([]);
   const [selectedParticipant, setSelectedParticipant] =
     useState<SelectedParticipant | null>(null);
@@ -41,6 +38,7 @@ export function AssignTest() {
       }
     : null;
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     const fetchTests = async () => {
       try {
@@ -58,7 +56,7 @@ export function AssignTest() {
 
         setAssessments(tableData);
       } catch (error) {
-        console.error("Error cargando tests", error);
+        setError("Ocurrió un problema con el servidor");
       } finally {
         setLoading(false);
       }
@@ -77,20 +75,40 @@ export function AssignTest() {
       <div className="dark:border-strokedark border-b border-stroke px-4">
         <Stepper currentStep={currentStep} />
       </div>
+      {alert.type && (
+        <div className="mt-4 px-8">
+          <Alert
+            variant={alert.type}
+            title={alert.type === "success" ? "¡Éxito!" : "Error"}
+            description={alert.message}
+          />
+        </div>
+      )}
       <div className="p-6 lg:p-8">
         {currentStep === 1 && (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {tests.map((test) => (
-              <TestCard
-                key={test.id}
-                test={test}
-                isSelected={selectedTestId === test.id}
-                onSelect={(id) => setSelectedTestId(id)}
-              />
-            ))}
-          </div>
+          <>
+            {loading ? (
+              <div className="flex h-64 w-full items-center justify-center">
+                <Loader size={60} color="text-blue-500" />
+              </div>
+            ) : error ? (
+              <div className="text-center font-semibold text-red-500">
+                {error}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {tests.map((test) => (
+                  <TestCard
+                    key={test.id}
+                    test={test}
+                    isSelected={selectedTestId === test.id}
+                    onSelect={(id) => setSelectedTestId(id)}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
-
         {currentStep === 2 && (
           <div>
             {" "}
@@ -182,16 +200,31 @@ export function AssignTest() {
                       results,
                     });
 
-                    alert("Test registrado correctamente");
+                    setAlert({
+                      type: "success",
+                      message: "El test se guardó correctamente.",
+                    });
                     setCurrentStep(1);
                     setSelectedTestId(null);
                     setSelectedParticipant(null);
                     setValues({});
                     setObservations("");
                     setDate(new Date().toISOString().split("T")[0]);
+
+                    setTimeout(
+                      () => setAlert({ type: null, message: "" }),
+                      3000,
+                    );
                   } catch (error) {
-                    console.error("Error registrando test", error);
-                    alert("Error al registrar el test");
+                    setAlert({
+                      type: "error",
+                      message: "Error al registrar el test.",
+                    });
+
+                    setTimeout(
+                      () => setAlert({ type: null, message: "" }),
+                      3000,
+                    );
                   }
                 }
               }}

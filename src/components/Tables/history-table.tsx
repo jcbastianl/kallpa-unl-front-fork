@@ -29,6 +29,7 @@ export function HistoryTable({ data }: { data: Participant[] }) {
       return matchesSearch && matchesStatus;
     });
   }, [searchTerm, statusFilter, data]);
+  const isEmpty = filteredData.length === 0;
   return (
     <div className="flex flex-col gap-5">
       <div className="dark:border-strokedark dark:bg-meta-4 flex items-center gap-4 rounded-xl border border-stroke bg-gray-2 bg-white p-2 dark:border-dark-3 dark:bg-gray-dark">
@@ -78,11 +79,19 @@ export function HistoryTable({ data }: { data: Participant[] }) {
           <FiFilter size={18} />
         </button>
       </div>
-      <TableBase
-        columns={historyColumns((path) => router.push(path))}
-        data={filteredData}
-        rowKey={(a) => a.external_id ?? a.id.toString()}
-      />
+      {isEmpty ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 py-16 text-center dark:border-gray-600 dark:bg-gray-800">
+          <p className="text-lg font-semibold text-gray-600 dark:text-gray-300">
+            No hay registros para mostrar
+          </p>
+        </div>
+      ) : (
+        <TableBase
+          columns={historyColumns((path) => router.push(path))}
+          data={filteredData}
+          rowKey={(a) => a.external_id ?? a.id.toString()}
+        />
+      )}
     </div>
   );
 }

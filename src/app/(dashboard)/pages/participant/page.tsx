@@ -5,23 +5,50 @@ import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { ParticipantsTable } from "@/components/Tables/participant-table";
 import { participantService } from "@/services/participant.service";
 import type { Participant } from "@/types/participant";
+import Loader from "@/components/Loader/loader";
 
 export default function ParticipantPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
+        setError(null);
+
         const data = await participantService.getAll();
         setParticipants(data);
-      } catch (error) {
-        console.error("Error cargando participantes", error);
+      } catch (err) {
+        setError("Ocurrió un problema con el servidor, espere un momento");
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
   }, []);
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader size={60} />
+      </div>
+    );
+  }
 
+  if (error) {
+    return (
+      <div className="flex h-[60vh] flex-col items-center justify-center text-center">
+        <p className="text-lg font-semibold text-red-600">
+          Ocurrió un problema con el servidor
+        </p>
+        <p className="mt-2 text-sm text-gray-500">
+          Espere un momento e intente nuevamente
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="mx-auto w-full max-w-[1080px]">
       <Breadcrumb pageName="Lista Participantes" />

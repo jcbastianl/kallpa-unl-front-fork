@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { userService, UserProfileData } from "@/services/user.services";
 import { ShowcaseSection } from "@/components/Layouts/showcase-section";
+import { FiEdit } from "react-icons/fi";
 
 export function PersonalInfoForm() {
   const [loading, setLoading] = useState(false);
@@ -23,7 +24,7 @@ export function PersonalInfoForm() {
         const lastName = parsedUser.last_name || parsedUser.lastName || "";
         const phone = parsedUser.phone || "";
         const address = parsedUser.address || "";
-        
+
         setFormData({
           firstName,
           lastName,
@@ -44,12 +45,12 @@ export function PersonalInfoForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.password) {
       alert("Debes ingresar tu contraseña para guardar los cambios");
       return;
     }
-    
+
     setLoading(true);
 
     try {
@@ -69,16 +70,19 @@ export function PersonalInfoForm() {
         };
 
         localStorage.setItem("user", JSON.stringify(updatedUser));
-        
+
         alert("Perfil actualizado correctamente");
-        
+
         window.location.reload();
       } else {
         alert(response.msg || "Error al actualizar perfil");
       }
     } catch (error: any) {
       console.error("Error completo:", error);
-      alert("Error: " + (error.response?.data?.msg || error.message || "Error al actualizar"));
+      alert(
+        "Error: " +
+          (error.response?.data?.msg || error.message || "Error al actualizar"),
+      );
     } finally {
       setLoading(false);
     }
@@ -91,7 +95,7 @@ export function PersonalInfoForm() {
         const parsedUser = JSON.parse(storedUser);
         const firstName = parsedUser.first_name || parsedUser.firstName || "";
         const lastName = parsedUser.last_name || parsedUser.lastName || "";
-        
+
         setFormData({
           firstName,
           lastName,
@@ -106,7 +110,11 @@ export function PersonalInfoForm() {
   };
 
   return (
-    <ShowcaseSection title="Información Personal" className="!p-7">
+    <ShowcaseSection
+      icon={<FiEdit size={24} />}
+      title="Información Personal"
+      description="Actualiza tus datos personales"
+    >
       <form onSubmit={handleSubmit}>
         <div className="mb-5.5 flex flex-col gap-5.5 sm:flex-row">
           <div className="w-full sm:w-1/2">
@@ -186,15 +194,7 @@ export function PersonalInfoForm() {
 
         <div className="flex justify-end gap-3">
           <button
-            className="rounded-lg border border-stroke px-6 py-[7px] font-medium text-dark hover:shadow-1 dark:border-dark-3 dark:text-white"
-            type="button"
-            onClick={handleCancel}
-          >
-            Cancelar
-          </button>
-
-          <button
-            className="rounded-lg bg-primary px-6 py-[7px] font-medium text-gray-2 hover:bg-opacity-90 disabled:opacity-50"
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-primary p-[13px] font-bold text-white hover:bg-opacity-90"
             type="submit"
             disabled={loading}
           >

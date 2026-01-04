@@ -10,6 +10,7 @@ import { ArrowLeftIcon, ChevronUp } from "./icons";
 import { MenuItem } from "./menu-item";
 import { useSidebarContext } from "./sidebar-context";
 import { getUserRole } from "@/services/auth.service";
+import { FiActivity } from "react-icons/fi";
 
 export function Sidebar() {
   const role = getUserRole();
@@ -67,14 +68,36 @@ export function Sidebar() {
       >
         <div className="flex h-full flex-col py-10 pl-[25px] pr-[7px]">
           <div className="relative pr-4.5">
+            ;
             <Link
-              href={"/dashboard"}
+              href="/dashboard"
               onClick={() => isMobile && toggleSidebar()}
-              className="px-0 py-2.5 min-[850px]:py-0"
+              className="flex items-center gap-3 px-0 py-2.5 min-[850px]:py-0"
             >
-              <Logo />
-            </Link>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="-mt-8 align-middle text-primary"
+              >
+                <path d="m6.5 6.5 11 11" />
+                <path d="m10 10 5.5 5.5" />
+                <path d="m3 21 2.5-2.5" />
+                <path d="m3 14 7 7" />
+                <path d="m14 3 7 7" />
+                <path d="m18.5 5.5 2.5-2.5" />
+              </svg>
 
+              <span className="-mt-8 text-3xl font-extrabold leading-none text-slate-900 dark:text-white">
+                Kallpa UNL
+              </span>
+            </Link>
             {isMobile && (
               <button
                 onClick={toggleSidebar}

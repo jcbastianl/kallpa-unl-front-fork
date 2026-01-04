@@ -6,15 +6,31 @@ import { Select } from "../FormElements/select";
 import { FiSave, FiUserPlus, FiUsers } from "react-icons/fi";
 import { Alert } from "@/components/ui-elements/alert";
 import ErrorMessage from "../FormElements/errormessage";
+import { ShowcaseSection } from "../Layouts/showcase-section";
 
 export const RegisterParticipantForm = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
   const [showAlert, setShowAlert] = useState(false);
-  const [alertType, setAlertType] = useState<"success" | "error">("success");
+  const [alertVariant, setAlertVariant] = useState<
+    "success" | "error" | "warning"
+  >("success");
   const [alertTitle, setAlertTitle] = useState("");
   const [alertDescription, setAlertDescription] = useState("");
+  const triggerAlert = (
+    variant: "success" | "error" | "warning",
+    title: string,
+    description: string,
+  ) => {
+    setAlertVariant(variant);
+    setAlertTitle(title);
+    setAlertDescription(description);
+    setShowAlert(true);
+
+    setTimeout(() => {
+      setShowAlert(false);
+    }, 3000);
+  };
 
   // const [formData, setFormData] = useState({
   //   firstName: "",
@@ -78,12 +94,10 @@ export const RegisterParticipantForm = () => {
     clearFieldError(name);
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrors({});
-    const newErrors: Record<string, string> = {};
 
     try {
       if (!formData.firstName)
@@ -136,12 +150,11 @@ export const RegisterParticipantForm = () => {
         ...formData,
         age: formData.age ? parseInt(formData.age) : 0,
       });
-
-      setAlertType("success");
-      setAlertTitle("Participante registrado");
-      setAlertDescription("El participante se registró correctamente.");
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 3000);
+      triggerAlert(
+        "success",
+        "Participante registrado",
+        "El participante se registró correctamente.",
+      );
 
       setFormData({
         firstName: "",
@@ -157,57 +170,43 @@ export const RegisterParticipantForm = () => {
         responsibleDni: "",
         responsiblePhone: "",
       });
-
     } catch (err: any) {
-      setAlertType("error");
-      setAlertTitle("Error");
-      setAlertDescription(err.message || "Error al registrar participante.");
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 3000);
+      if (err?.data && typeof err.data === "object") {
+        setErrors(err.data);
+        const hasFieldErrors = Object.keys(err.data).some(
+          (key) => key !== "general" && err.data[key],
+        );
+        if (!hasFieldErrors && err.msg) {
+          triggerAlert("error", "Error al registrar", err.msg);
+        }
+      } else {
+        triggerAlert(
+          "error",
+          "Error al registrar",
+          "No se pudo registrar el participante.",
+        );
+      }
     } finally {
       setLoading(false);
     }
   };
 
-
   return (
-    <div className="rounded-[10px] border border-stroke bg-white shadow-1 dark:border-dark-3 dark:bg-gray-dark dark:shadow-card">
-      <div className="flex items-center justify-between border-b border-slate-200 px-7 py-6 transition-colors dark:border-slate-800">
-        <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600 shadow-sm dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400">
-            <FiUserPlus size={24} strokeWidth={2} />
-          </div>
-
-          <div>
-            <h3 className="text-2xl font-bold leading-tight text-slate-900 dark:text-white">
-              Registro de Participante
-            </h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Ingresa los datos para un nuevo perfil antropométrico.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 shadow-sm dark:border-slate-700/50 dark:bg-slate-800">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
-          </span>
-          <span className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-600 dark:text-slate-300">
-            Nuevo Ingreso
-          </span>
-        </div>
-      </div>
+    <ShowcaseSection
+      icon={<FiUserPlus size={24} />}
+      title="Registro de Participante"
+      description="Ingresa los datos para un nuevo perfil"
+    >
       {showAlert && (
-        <div className="mb-4">
+        <div className="mb-6">
           <Alert
-            variant={alertType}
+            variant={alertVariant}
             title={alertTitle}
             description={alertDescription}
           />
         </div>
       )}
-
-      <form onSubmit={handleSubmit} className="p-6.5">
+      <form onSubmit={handleSubmit}>
         <div className="mb-4.5 flex flex-col gap-6 xl:flex-row">
           <div className="w-full xl:w-1/2">
             <InputGroup
@@ -239,7 +238,7 @@ export const RegisterParticipantForm = () => {
             <InputGroup
               label="Cédula"
               name="dni"
-              type="text"
+              type="number"
               placeholder="110XXXXXXX"
               value={formData.dni}
               handleChange={handleChange}
@@ -290,7 +289,7 @@ export const RegisterParticipantForm = () => {
         <div className="mb-4.5 flex flex-col gap-6 xl:flex-row">
           <div className="w-full xl:w-1/2">
             <InputGroup
-              label="Email Address (Optional)"
+              label="Correo electrónico"
               name="email"
               type="email"
               placeholder="john@example.com"
@@ -304,8 +303,8 @@ export const RegisterParticipantForm = () => {
             <InputGroup
               label="Phone Number"
               name="phone"
-              type="text"
-              placeholder="+1 (555) 000-0000"
+              type="number"
+              placeholder="+593 999 000 000"
               value={formData.phone}
               handleChange={handleChange}
             />
@@ -363,7 +362,7 @@ export const RegisterParticipantForm = () => {
               <InputGroup
                 label="Cédula del Responsable"
                 name="responsibleDni"
-                type="text"
+                type="number"
                 placeholder="110XXXXXXX"
                 value={formData.responsibleDni}
                 handleChange={handleChange}
@@ -378,7 +377,7 @@ export const RegisterParticipantForm = () => {
               label="Teléfono del Responsable"
               name="responsiblePhone"
               type="text"
-              placeholder="099..."
+              placeholder="+593 999 000 000"
               value={formData.responsiblePhone}
               handleChange={handleChange}
               disabled={!isMinor}
@@ -402,6 +401,6 @@ export const RegisterParticipantForm = () => {
           )}
         </button>
       </form>
-    </div>
+    </ShowcaseSection>
   );
 };

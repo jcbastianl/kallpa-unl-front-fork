@@ -99,6 +99,29 @@ export const getAssessmentsByParticipant = async (
   return response.data;
 };
 
+export const getAverageBMI = async (): Promise<{ average_bmi: number | null }> => {
+  const response = await get<ApiResponse<{ average_bmi: number | null }>>(
+    "/average-bmi"
+  );
+  return response.data;
+};
+
+export const getAnthropometricHistory = async (
+  dateFrom?: string,
+  dateTo?: string,
+) => {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+
+  const response = await get<ApiResponse<AssessmentResponseData[]>>(
+    `/assessments/history?${params.toString()}`
+  );
+
+  return response.data; // esto contendrá el arreglo de evaluaciones
+};
+
+
 // ==================== TEST FORMULARIOS ====================
 export const getTests = async (): Promise<TestListItem[]> => {
   const response = await get<ApiResponse<TestListItem[]>>("/list-test");

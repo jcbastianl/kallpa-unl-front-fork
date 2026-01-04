@@ -6,10 +6,3 @@ export function compactFormat(value: number) {
 
   return formatter.format(value);
 }
-
-export function standardFormat(value: number) {
-  return value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}

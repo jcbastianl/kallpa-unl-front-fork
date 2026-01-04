@@ -1,6 +1,5 @@
-import { ArrowDownIcon, ArrowUpIcon } from "@/assets/icons";
 import { cn } from "@/lib/utils";
-import type { JSX, SVGProps } from "react";
+import type { IconType } from "react-icons"; // Cambiamos el tipo a IconType de react-icons
 
 type PropsType = {
   label: string;
@@ -8,45 +7,43 @@ type PropsType = {
     value: number | string;
     growthRate: number;
   };
-  Icon: (props: SVGProps<SVGSVGElement>) => JSX.Element;
+  Icon: IconType; // Ahora recibe el componente de Fi icon directamente
+  variant?: "green" | "orange" | "purple" | "blue"; // Añadimos variantes para los colores
 };
 
-export function OverviewCard({ label, data, Icon }: PropsType) {
+export function OverviewCard({ label, data, Icon, variant = "blue" }: PropsType) {
   const isDecreasing = data.growthRate < 0;
 
+  // Definición de estilos por variante (Fondo translúcido y color de icono)
+  const variantStyles = {
+    green: "bg-[#3FD97F]/10 text-[#3FD97F]",
+    orange: "bg-[#FF9C55]/10 text-[#FF9C55]",
+    purple: "bg-[#8155FF]/10 text-[#8155FF]",
+    blue: "bg-[#18BFFF]/10 text-[#18BFFF]",
+  };
+
   return (
-    <div className="rounded-[10px] bg-white p-6 shadow-1 dark:bg-gray-dark">
-      <Icon />
+    <div className="rounded-2xl bg-[#1a2233] p-6 shadow-lg">
+      {/* Contenedor del Icono con fondo circular translúcido */}
+      <div className={cn(
+        "mb-8 flex h-14 w-14 items-center justify-center rounded-full transition-transform hover:scale-110",
+        variantStyles[variant]
+      )}>
+        <Icon size={28} strokeWidth={2.5} />
+      </div>
 
-      <div className="mt-6 flex items-end justify-between">
-        <dl>
-          <dt className="mb-1.5 text-heading-6 font-bold text-dark dark:text-white">
-            {data.value}
-          </dt>
-
-          <dd className="text-sm font-medium text-dark-6">{label}</dd>
-        </dl>
-
-        <dl
-          className={cn(
-            "text-sm font-medium",
-            isDecreasing ? "text-red" : "text-green",
-          )}
-        >
-          <dt className="flex items-center gap-1.5">
-            {data.growthRate}%
-            {isDecreasing ? (
-              <ArrowDownIcon aria-hidden />
-            ) : (
-              <ArrowUpIcon aria-hidden />
-            )}
-          </dt>
-
-          <dd className="sr-only">
-            {label} {isDecreasing ? "Decreased" : "Increased"} by{" "}
-            {data.growthRate}%
-          </dd>
-        </dl>
+      <div className="flex flex-col gap-1">
+        <h3 className="text-3xl font-bold text-white">{data.value}</h3>
+        <div className="mt-1 flex items-center justify-between">
+          <p className="text-sm font-medium text-slate-400">{label}</p>
+          <div className={cn(
+            "flex items-center gap-1 text-sm font-semibold",
+            isDecreasing ? "text-red-500" : "text-green-400"
+          )}>
+            <span>{Math.abs(data.growthRate)}%</span>
+            {/* Aquí irían tus flechas de react-icons también */}
+          </div>
+        </div>
       </div>
     </div>
   );

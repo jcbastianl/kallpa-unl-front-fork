@@ -5,6 +5,7 @@ import { ShowcaseSection } from "@/components/Layouts/showcase-section";
 import {
   FiActivity,
   FiClipboard,
+  FiEdit,
   FiInfo,
   FiSave,
   FiSearch,
@@ -37,6 +38,19 @@ export function AnthropometricForm() {
   const [alertType, setAlertType] = useState<"success" | "error">("success");
   const [alertTitle, setAlertTitle] = useState("");
   const [alertDescription, setAlertDescription] = useState("");
+  const resetForm = () => {
+    setSelectedParticipant("");
+    setWeight(0);
+    setHeight(0);
+    setWaistPerimeter(0);
+    setWingspan(0);
+    const today = new Date();
+    setDate(today.toISOString().split("T")[0]);
+    setBmi(null);
+    setStatus("");
+    setErrors({});
+  };
+
   useEffect(() => {
     const today = new Date();
     const formattedDate = today.toISOString().split("T")[0];
@@ -49,24 +63,17 @@ export function AnthropometricForm() {
       (p.lastName?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
       (p.dni?.includes(search) ?? false),
   );
+  const selected = participants.find(
+    (p) =>
+      `${p.firstName}${p.lastName ? " " + p.lastName : ""}` ===
+      selectedParticipant,
+  );
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
 
     const data: AssessmentData = {
-      participant_external_id:
-        participants.find(
-          (p) =>
-            `${p.firstName}${p.lastName ? " " + p.lastName : ""}` ===
-            selectedParticipant,
-        )?.external_id ||
-        String(
-          participants.find(
-            (p) =>
-              `${p.firstName}${p.lastName ? " " + p.lastName : ""}` ===
-              selectedParticipant,
-          )?.id,
-        ),
+      participant_external_id: selected?.external_id ?? "",
       date,
       weight,
       height,
@@ -92,8 +99,17 @@ export function AnthropometricForm() {
       if (response.code === 400 && response.errors) {
         setErrors(response.errors);
       }
-    } catch (error) {
-      console.error("Error guardando evaluación:", error);
+    } catch (error: any) {
+      if (error.response) {
+        const { data } = error.response;
+        if (data && data.errors) {
+          setErrors(data.errors);
+        }
+      } else if (error.request) {
+        console.log("No se pudo conectar al servidor");
+      } else {
+        console.log("Error desconocido:", error.message);
+      }
       setAlertType("error");
       setAlertTitle("Error");
       setAlertDescription("No se pudo guardar la evaluación.");
@@ -107,17 +123,6 @@ export function AnthropometricForm() {
       delete newErrors[field];
       return newErrors;
     });
-  };
-  const resetForm = () => {
-    setSelectedParticipant("");
-    setWeight(0);
-    setHeight(0);
-    setWaistPerimeter(0);
-    setWingspan(0);
-    setDate("");
-    setBmi(null);
-    setStatus("");
-    setErrors({});
   };
   const getBmiColors = () => {
     switch (status) {
@@ -163,31 +168,12 @@ export function AnthropometricForm() {
     }
   };
 
-  
   return (
     <ShowcaseSection
-      title={
-        <div className="flex w-full items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FiClipboard className="text-primary" size={20} />
-            <span className="font-semibold">Formulario Antropométrico</span>
-          </div>
-
-          <button
-            type="button"
-            className="dark:border-strokedark flex items-center gap-2 rounded-lg border border-gray-400 bg-transparent px-4 py-1.5 text-sm font-medium text-dark transition hover:bg-white/5 dark:text-white"
-            onClick={() => {
-              console.log("Abrir historial");
-            }}
-          >
-            <LuHistory size={16} />
-            <span>Historial</span>
-          </button>
-        </div>
-      }
-      className="!p-6.5"
+      icon={<FiEdit size={24} />}
+      title="Registro Medidas Antropométricas"
+      description="Ingresa los datos para calcular tu IMC"
     >
-      {/* alert */}
       {showAlert && (
         <div className="mb-6">
           <Alert
@@ -197,7 +183,7 @@ export function AnthropometricForm() {
           />
         </div>
       )}
-      
+
       <form
         action="#"
         onSubmit={handleSubmit}
@@ -412,22 +398,21 @@ export function AnthropometricForm() {
                   className={`${getBmiColors().icon} opacity-70`}
                 />
 
-                <span className={`text-xs font-bold uppercase ${getBmiColors().text}`}>
+                <span
+                  className={`text-xs font-bold uppercase ${getBmiColors().text}`}
+                >
                   {status || "---"}
                 </span>
-
               </div>
             </div>
             <div className="mt-8">
               <div className="relative h-2.5 w-full rounded-full bg-gray-200 dark:bg-gray-800">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${getBmiColors().bar}`}
-
                   style={{
                     width: bmi ? `${Math.min((bmi / 40) * 100, 100)}%` : "0%",
                   }}
                 ></div>
-
               </div>
               <div className="mt-3 flex justify-between text-[10px] font-bold uppercase tracking-tighter text-gray-500">
                 <span>Bajo</span>

@@ -2,11 +2,34 @@
 import React, { useState } from "react";
 import InputGroup from "@/components/FormElements/InputGroup";
 import { Select } from "../FormElements/select";
-import { FiEdit, FiSave} from "react-icons/fi";
+import { FiEdit, FiSave } from "react-icons/fi";
 import { userService } from "@/services/user.services";
 import { CreateUserRequest } from "@/types/user";
+import ErrorMessage from "../FormElements/errormessage";
+import { ShowcaseSection } from "../Layouts/showcase-section";
+import { Alert } from "../ui-elements/alert";
 
 export const UserForm = () => {
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showAlert, setShowAlert] = useState(false);
+const [alertType, setAlertType] = useState<"success" | "error" | "warning">("success");
+const [alertTitle, setAlertTitle] = useState("");
+const [alertDescription, setAlertDescription] = useState("");
+const showTemporaryAlert = (
+  type: "success" | "error" | "warning",
+  title: string,
+  description: string,
+  duration = 3000
+) => {
+  setAlertType(type);
+  setAlertTitle(title);
+  setAlertDescription(description);
+  setShowAlert(true);
+
+  setTimeout(() => {
+    setShowAlert(false);
+  }, duration);
+};
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -15,7 +38,7 @@ export const UserForm = () => {
     address: "",
     email: "",
     password: "",
-    role: "" as "DOCENTE" | "PASANTE" | "ADMINISTRADOR" |  "",
+    role: "" as "DOCENTE" | "PASANTE" | "ADMINISTRADOR" | "",
   });
 
   const participantTypeOptions = [
@@ -30,11 +53,12 @@ export const UserForm = () => {
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    setErrors({});
     try {
       const payload: CreateUserRequest = {
         firstName: formData.firstName,
@@ -49,7 +73,7 @@ export const UserForm = () => {
 
       await userService.createUser(payload);
 
-      alert("Usuario registrado correctamente");
+      showTemporaryAlert("success", "Éxito", "Usuario registrado correctamente");
 
       setFormData({
         firstName: "",
@@ -62,39 +86,30 @@ export const UserForm = () => {
         role: "",
       });
     } catch (error: any) {
-      alert(error.message || "Error al registrar usuario");
+      if (error?.data) {
+        setErrors(error.data);
+      } else {
+        showTemporaryAlert("error", "Error", error.msg || "Error al registrar usuario");
+      }
     }
   };
 
   return (
-    <div className="rounded-[10px] border border-stroke bg-white shadow-1 dark:border-dark-3 dark:bg-gray-dark dark:shadow-card">
-      <div className="flex items-center justify-between border-b border-slate-200 px-7 py-6 transition-colors dark:border-slate-800">
-        <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600 shadow-sm dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400">
-            <FiEdit size={24} strokeWidth={2} />
-          </div>
-
-          <div>
-            <h3 className="text-2xl font-bold leading-tight text-slate-900 dark:text-white">
-              Registro de Cuenta
-            </h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Ingresa los datos personales para un nuevo perfil.
-            </p>
-          </div>
+    <ShowcaseSection
+      icon={<FiEdit size={24} />}
+      title="Registro de Nueva Cuenta"
+      description="Ingresa los datos personales para crear un cuaneta nueva"
+    >
+      {showAlert && (
+        <div className="mb-6">
+          <Alert
+            variant={alertType}
+            title={alertTitle}
+            description={alertDescription}
+          />
         </div>
-        <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 shadow-sm dark:border-slate-700/50 dark:bg-slate-800">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
-          </span>
-          <span className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-600 dark:text-slate-300">
-            Nuevo Ingreso
-          </span>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="p-6.5">
+      )}
+      <form onSubmit={handleSubmit}>
         <div className="mb-4.5 grid grid-cols-1 gap-6 xl:grid-cols-2">
           <div>
             <InputGroup
@@ -105,6 +120,7 @@ export const UserForm = () => {
               value={formData.firstName}
               handleChange={handleChange}
             />
+            <ErrorMessage message={errors.firstName} />
           </div>
 
           <div>
@@ -116,6 +132,7 @@ export const UserForm = () => {
               value={formData.lastName}
               handleChange={handleChange}
             />
+            <ErrorMessage message={errors.lastName} />
           </div>
         </div>
 
@@ -129,6 +146,7 @@ export const UserForm = () => {
               value={formData.dni}
               handleChange={handleChange}
             />
+            <ErrorMessage message={errors.dni} />
           </div>
 
           <div>
@@ -164,6 +182,7 @@ export const UserForm = () => {
               value={formData.email}
               handleChange={handleChange}
             />
+            <ErrorMessage message={errors.email} />
           </div>
 
           <div>
@@ -175,6 +194,7 @@ export const UserForm = () => {
               value={formData.password}
               handleChange={handleChange}
             />
+            <ErrorMessage message={errors.password} />
           </div>
         </div>
         <div className="mb-4.5">
@@ -187,6 +207,7 @@ export const UserForm = () => {
             placeholder="Seleccione un rol"
             className="w-full"
           />
+          <ErrorMessage message={errors.role} />
         </div>
         <button
           type="submit"
@@ -196,6 +217,6 @@ export const UserForm = () => {
           Registrar Cuenta
         </button>
       </form>
-    </div>
+    </ShowcaseSection>
   );
 };
