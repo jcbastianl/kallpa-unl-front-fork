@@ -25,9 +25,13 @@ export interface AuthUser {
   stament: string;
   first_name: string;
   last_name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   photo?: string;
   token: string;
+  phone?: string;
+  address?: string;
 }
 export type Role = "DOCENTE" | "PASANTE" | "ADMINISTRADOR";
 
