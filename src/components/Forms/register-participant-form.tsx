@@ -33,6 +33,7 @@ export const RegisterParticipantForm = () => {
     lastName: "",
     dni: "",
     type: "",
+    program: "", // Required program field: INICIACION or FUNCIONAL
     phone: "",
     address: "",
     age: "",
@@ -60,6 +61,13 @@ export const RegisterParticipantForm = () => {
     { value: "TRABAJADOR", label: "Trabajador" },
     { value: "EXTERNO", label: "Externo" },
     { value: "PARTICIPANTE", label: "Participante General" },
+  ];
+
+  // Fixed program options per backend API
+  const programOptions = [
+    { value: "", label: "Seleccione un programa" },
+    { value: "INICIACION", label: "Iniciación" },
+    { value: "FUNCIONAL", label: "Funcional" },
   ];
 
   const handleChange = (
@@ -92,6 +100,9 @@ export const RegisterParticipantForm = () => {
 
       if (!formData.type)
         newErrors.type = "Tipo de participante requerido";
+
+      if (!formData.program)
+        newErrors.program = "Programa requerido (INICIACION o FUNCIONAL)";
 
       if (formData.email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -137,6 +148,7 @@ export const RegisterParticipantForm = () => {
         lastName: "",
         dni: "",
         type: "ESTUDIANTE",
+        program: "",
         phone: "",
         address: "",
         age: "",
@@ -259,6 +271,20 @@ export const RegisterParticipantForm = () => {
             />
             <ErrorMessage message={errors.type} />
           </div>
+        </div>
+
+        {/* Program Selection */}
+        <div className="mb-4.5">
+          <Select
+            name="program"
+            label="Programa *"
+            items={programOptions}
+            placeholder="Seleccione programa"
+            value={formData.program}
+            onChange={(e) => handleChange(e)}
+            className="w-full"
+          />
+          <ErrorMessage message={errors.program} />
         </div>
 
         <div className="mb-4.5 flex flex-col gap-6 xl:flex-row">

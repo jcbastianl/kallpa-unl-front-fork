@@ -63,7 +63,7 @@ export default function Historial() {
         attendanceService.getHistory(dateFrom, dateTo, undefined, filterDay),
         attendanceService.getSchedules()
       ]);
-      
+
       const dayMap: Record<string, string> = {
         'monday': 'LUNES', 'tuesday': 'MARTES', 'wednesday': 'MIERCOLES',
         'thursday': 'JUEVES', 'friday': 'VIERNES', 'saturday': 'SABADO', 'sunday': 'DOMINGO'
@@ -77,7 +77,7 @@ export default function Historial() {
         end_time: s.endTime || s.end_time
       }));
       setSchedules(normalizedSchedules);
-      
+
       // El backend ya devuelve los datos agrupados, solo normalizamos
       const rawHistory = historyRes.data.data || [];
       const normalizedHistory = normalizeHistoryData(rawHistory);
@@ -89,33 +89,49 @@ export default function Historial() {
     }
   };
 
-  // Normaliza los datos del historial que ya vienen agrupados del backend
+  // Backend returns individual attendance records (one per participant).
+  // We need to GROUP them by (schedule.external_id + date) to get session summaries.
   const normalizeHistoryData = (records: any[]): HistoryRecord[] => {
-    return records.map(r => {
-      // Debug: ver qué campos llegan del backend
-      console.log('History record from backend:', r);
-      
-      // IMPORTANTE: Usar el external_id del SCHEDULE, no del registro de asistencia
-      // La estructura es: { external_id: "asistencia-id", schedule: { external_id: "schedule-id", ... } }
-      const scheduleId = r.schedule?.external_id || r.schedule_external_id || r.schedule_id || r.scheduleId;
-      
-      if (!scheduleId) {
-        console.warn('⚠️ No schedule_id found in record:', r);
-        console.warn('⚠️ r.schedule:', r.schedule);
-      } else {
-        console.log('✅ Using schedule_id:', scheduleId);
+    const grouped: Record<string, {
+      date: string;
+      schedule: any;
+      attendances: any[];
+    }> = {};
+
+    records.forEach(r => {
+      const scheduleId = r.schedule?.external_id || r.schedule_external_id || r.schedule_id;
+      const date = r.date;
+      const key = `${scheduleId}_${date}`;
+
+      if (!grouped[key]) {
+        grouped[key] = {
+          date,
+          schedule: r.schedule || {},
+          attendances: []
+        };
       }
-      
+      grouped[key].attendances.push({
+        participant: r.participant,
+        status: r.status
+      });
+    });
+
+    // Convert grouped data to HistoryRecord format
+    return Object.values(grouped).map(g => {
+      const presentes = g.attendances.filter(a => a.status?.toLowerCase() === 'present').length;
+      const ausentes = g.attendances.filter(a => a.status?.toLowerCase() === 'absent').length;
+      const justificados = g.attendances.filter(a => a.status?.toLowerCase() === 'justified').length;
+
       return {
-        date: r.date,
-        schedule_id: scheduleId,
-        schedule_name: r.schedule?.name || r.schedule_name || r.scheduleName || 'Sesión',
-        day_of_week: r.schedule?.day_of_week || r.day_of_week || r.dayOfWeek || '',
-        start_time: r.schedule?.start_time || r.start_time || r.startTime || '',
-        end_time: r.schedule?.end_time || r.end_time || r.endTime || '',
-        presentes: r.presentes || 0,
-        ausentes: r.ausentes || 0,
-        total: r.total || 0
+        date: g.date,
+        schedule_id: g.schedule?.external_id || '',
+        schedule_name: g.schedule?.name || 'Sesión',
+        day_of_week: g.schedule?.day_of_week || '',
+        start_time: g.schedule?.start_time || '',
+        end_time: g.schedule?.end_time || '',
+        presentes,
+        ausentes,
+        total: g.attendances.length
       };
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
@@ -134,27 +150,60 @@ export default function Historial() {
   const viewDetail = async (scheduleId: string, date: string) => {
     try {
       const res = await attendanceService.getSessionDetail(scheduleId, date);
-      setSessionDetail(res.data.data);
+      // Backend returns an array of individual attendance records for this session
+      const records = res.data.data || [];
+
+      if (records.length === 0) {
+        console.warn('No attendance records found for this session');
+        alert('No se encontraron registros de asistencia para esta sesión');
+        return;
+      }
+
+      // Build the SessionDetail structure from flat records
+      const schedule = records[0]?.schedule || {};
+      const attendances = records.map((r: any) => ({
+        participant: r.participant,
+        status: r.status
+      }));
+
+      const present = attendances.filter((a: any) => a.status?.toLowerCase() === 'present').length;
+      const absent = attendances.filter((a: any) => a.status?.toLowerCase() === 'absent').length;
+      const justified = attendances.filter((a: any) => a.status?.toLowerCase() === 'justified').length;
+
+      const sessionDetail = {
+        date,
+        schedule,
+        attendances,
+        stats: {
+          present,
+          absent,
+          justified,
+          total: attendances.length
+        }
+      };
+
+      setSessionDetail(sessionDetail);
       setShowModal(true);
     } catch (error) {
       console.error('Error loading session detail:', error);
+      alert('Error al cargar los detalles de la sesión');
     }
   };
 
   const handleDelete = async (scheduleId: string, date: string, scheduleName: string) => {
     // Debug: verificar que scheduleId tenga valor
     console.log('🗑️ Delete request - scheduleId:', scheduleId, 'date:', date);
-    
+
     if (!scheduleId) {
       alert('Error: No se encontró el ID del horario. Revisa la consola para más detalles.');
       console.error('❌ scheduleId is undefined or empty!');
       return;
     }
-    
+
     if (!confirm(`¿Estás seguro de eliminar la asistencia de "${scheduleName}" del ${date}?\n\nEsta acción no se puede deshacer.`)) {
       return;
     }
-    
+
     try {
       await attendanceService.deleteSessionAttendance(scheduleId, date);
       loadHistory();
@@ -178,12 +227,12 @@ export default function Historial() {
     const [year, month, day] = dateStr.split('-').map(Number);
     const date = new Date(year, month - 1, day, 12, 0, 0);
     const monthName = date.toLocaleDateString('es-ES', { month: 'short' });
-    
+
     // Usar el día del backend si está disponible, sino calcular (fallback)
-    const dayName = dayOfWeek 
+    const dayName = dayOfWeek
       ? dayNameMap[dayOfWeek.toLowerCase()] || dayOfWeek.substring(0, 3).toLowerCase()
       : date.toLocaleDateString('es-ES', { weekday: 'short' });
-    
+
     return `${dayName}, ${day} ${monthName}`;
   };
 
@@ -308,35 +357,45 @@ export default function Historial() {
               </button>
             </div>
             <div className="p-6 overflow-y-auto max-h-[60vh]">
-              <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-4 gap-4 mb-6">
                 <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-center">
-                  <p className="text-2xl font-bold text-green-600">{sessionDetail.stats?.presentes || 0}</p>
+                  <p className="text-2xl font-bold text-green-600">{sessionDetail.stats?.present || 0}</p>
                   <p className="text-xs text-green-700 dark:text-green-400">Presentes</p>
                 </div>
                 <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg text-center">
-                  <p className="text-2xl font-bold text-red-600">{sessionDetail.stats?.ausentes || 0}</p>
+                  <p className="text-2xl font-bold text-red-600">{sessionDetail.stats?.absent || 0}</p>
                   <p className="text-xs text-red-700 dark:text-red-400">Ausentes</p>
+                </div>
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg text-center">
+                  <p className="text-2xl font-bold text-yellow-600">{sessionDetail.stats?.justified || 0}</p>
+                  <p className="text-xs text-yellow-700 dark:text-yellow-400">Justificados</p>
                 </div>
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-center">
                   <p className="text-2xl font-bold text-blue-600">{sessionDetail.stats?.total || 0}</p>
                   <p className="text-xs text-blue-700 dark:text-blue-400">Total</p>
                 </div>
               </div>
-              
+
               <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Lista de Asistencia</h4>
               <div className="space-y-2">
-                {sessionDetail.records?.map((r, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <span className="font-medium text-gray-900 dark:text-white">{r.participant_name}</span>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                      r.status === 'PRESENT' ? 'bg-green-100 text-green-700' :
-                      r.status === 'ABSENT' ? 'bg-red-100 text-red-700' :
-                      'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {r.status === 'PRESENT' ? 'Presente' : r.status === 'ABSENT' ? 'Ausente' : 'Justificado'}
-                    </span>
-                  </div>
-                ))}
+                {sessionDetail.attendances?.length > 0 ? (
+                  sessionDetail.attendances.map((r: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {r.participant?.first_name || r.participant?.firstName || ''} {r.participant?.last_name || r.participant?.lastName || r.participant?.name || 'Participante'}
+                      </span>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${r.status?.toUpperCase() === 'PRESENT' ? 'bg-green-100 text-green-700' :
+                        r.status?.toUpperCase() === 'ABSENT' ? 'bg-red-100 text-red-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                        {r.status?.toUpperCase() === 'PRESENT' ? 'Presente' :
+                          r.status?.toUpperCase() === 'ABSENT' ? 'Ausente' : 'Justificado'}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-center py-4">No hay registros de participantes.</p>
+                )}
               </div>
             </div>
           </div>

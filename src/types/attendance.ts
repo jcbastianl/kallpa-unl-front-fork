@@ -3,7 +3,7 @@ export interface Session {
   external_id?: string;
   schedule_id?: string;
   name: string;
-  program_name?: string;
+  program?: string;
   start_time: string;
   end_time: string;
   day_of_week?: string;
@@ -16,7 +16,7 @@ export interface Schedule {
   id: string | number;
   external_id?: string;
   name: string;
-  program_name?: string;
+  program: string; // Updated: Program is now a string
   start_time: string;
   end_time: string;
   day_of_week: string;
@@ -27,6 +27,7 @@ export interface Schedule {
   start_date?: string | null;     // Rango de fechas inicio
   end_date?: string | null;       // Rango de fechas fin
   is_recurring?: boolean;         // false=fecha única, true=semanal
+  max_slots?: number;
 }
 
 export interface Participant {
@@ -67,10 +68,12 @@ export type HistoryRecord = AttendanceHistory;
 // Interface para crear sesiones
 export interface CreateScheduleData {
   name: string;
+  program: string;
   start_time: string;
   end_time: string;
   location?: string;
   capacity?: number;
+  max_slots?: number; // Added to match Schedule Object
   description?: string;
   // Para sesiones recurrentes
   day_of_week?: string;
@@ -84,9 +87,11 @@ export interface SessionDetail {
   date: string;
   schedule?: Schedule;
   stats?: {
-    presentes: number;
-    ausentes: number;
+    present: number;
+    absent: number;
+    justified: number;
     total: number;
   };
+  attendances?: any[]; // Using any[] temporarily or define a proper interface if needed
   records?: AttendanceRecord[];
 }

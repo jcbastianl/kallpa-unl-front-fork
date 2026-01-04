@@ -57,11 +57,11 @@ export default function Registro() {
     try {
       const res = await attendanceService.getSessionDetail(scheduleId, date);
       const records = res.data.data?.records || [];
-      
+
       if (records.length > 0) {
         setIsEditing(true);
         const existingAttendance: Record<string, string> = {};
-        records.forEach(r => {
+        records.forEach((r: any) => {
           existingAttendance[r.participant_id] = r.status;
         });
         participants.forEach(p => {
@@ -88,27 +88,50 @@ export default function Registro() {
 
   const loadData = async () => {
     try {
-      const [schedulesRes, participantsRes] = await Promise.all([
-        attendanceService.getSchedules(),
-        attendanceService.getParticipants()
-      ]);
-      
+      // First, load all schedules
+      const schedulesRes = await attendanceService.getSchedules();
+
       const dayMap: Record<string, string> = {
         'monday': 'LUNES', 'tuesday': 'MARTES', 'wednesday': 'MIERCOLES',
         'thursday': 'JUEVES', 'friday': 'VIERNES', 'saturday': 'SABADO', 'sunday': 'DOMINGO'
       };
       const rawSchedules = schedulesRes.data.data || [];
-      const normalizedSchedules = rawSchedules.map(s => ({
+      const normalizedSchedules = rawSchedules.map((s: any) => ({
         ...s,
         id: s.external_id || s.id,
+        program: s.program || '',
         day_of_week: dayMap[s.dayOfWeek?.toLowerCase() || ''] || dayMap[s.day_of_week?.toLowerCase() || ''] || s.dayOfWeek?.toUpperCase() || 'SIN DÍA',
         start_time: s.startTime || s.start_time,
         end_time: s.endTime || s.end_time
       }));
       setSchedules(normalizedSchedules);
-      
+
+      // If there's a preselected session, load participants for that schedule's program
+      const sessionId = searchParams.get('session');
+      if (sessionId) {
+        const selectedSched = normalizedSchedules.find((s: Schedule) => String(s.id) === sessionId);
+        if (selectedSched?.program) {
+          await loadParticipantsByProgram(selectedSched.program);
+        } else {
+          // Fallback: load all participants if no program
+          await loadParticipantsByProgram();
+        }
+      } else {
+        // No preselection - don't load participants yet
+        setParticipants([]);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadParticipantsByProgram = async (program?: string) => {
+    try {
+      const participantsRes = await attendanceService.getParticipantsByProgram(program);
       const rawParticipants = participantsRes.data.data || [];
-      const normalizedParticipants = rawParticipants.map(p => ({
+      const normalizedParticipants = rawParticipants.map((p: any) => ({
         ...p,
         id: p.external_id || p.id,
         name: p.name || `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim(),
@@ -116,9 +139,8 @@ export default function Registro() {
       })) as Participant[];
       setParticipants(normalizedParticipants);
     } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error loading participants:', error);
+      setParticipants([]);
     }
   };
 
@@ -139,7 +161,7 @@ export default function Registro() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedSchedule) {
       alert('Selecciona una sesión');
       return;
@@ -150,24 +172,24 @@ export default function Registro() {
 
     try {
       const records = Object.entries(attendance).map(([participantId, status]) => ({
-        participant_id: participantId,
+        participant_external_id: participantId,
         status: status.toLowerCase() // Backend espera minúsculas: present, absent, justified
       }));
 
       const requestData = {
-        schedule_id: selectedSchedule,
+        schedule_external_id: selectedSchedule,
         date: selectedDate,
-        records
+        attendances: records
       };
-      
+
       // Debug: Log del request que se envía
       console.log('📤 Enviando registro de asistencia:', requestData);
-      console.log('📋 schedule_id:', selectedSchedule);
+      console.log('📋 schedule_external_id:', selectedSchedule);
       console.log('📅 date:', selectedDate);
-      console.log('👥 records:', records);
+      console.log('👥 attendances:', records);
 
       const response = await attendanceService.registerAttendance(requestData);
-      
+
       // Debug: Log de la respuesta
       console.log('✅ Respuesta del backend:', response.data);
 
@@ -222,7 +244,7 @@ export default function Registro() {
             <span className="material-symbols-outlined text-blue-800">event</span>
             Información de la Sesión
           </h2>
-          
+
           {hasPreselectedSession && selectedScheduleData ? (
             // Vista simplificada cuando viene de sesiones
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
@@ -295,13 +317,12 @@ export default function Registro() {
                       type="button"
                       title={status.title}
                       onClick={() => handleStatusChange(p.id, status.value)}
-                      className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${
-                        attendance[p.id] === status.value
-                          ? status.color === 'green' ? 'bg-green-500 text-white ring-2 ring-green-300' :
-                            status.color === 'red' ? 'bg-red-500 text-white ring-2 ring-red-300' :
+                      className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${attendance[p.id] === status.value
+                        ? status.color === 'green' ? 'bg-green-500 text-white ring-2 ring-green-300' :
+                          status.color === 'red' ? 'bg-red-500 text-white ring-2 ring-red-300' :
                             'bg-yellow-500 text-white ring-2 ring-yellow-300'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
                     >
                       {status.label}
                     </button>

@@ -35,6 +35,7 @@ export default function Programar() {
 
   const [formData, setFormData] = useState({
     name: '',
+    program: '', // Program field (INICIACION or FUNCIONAL)
     day_of_week: '',
     start_time: '08:00',
     end_time: '09:00',
@@ -48,6 +49,12 @@ export default function Programar() {
     specific_date: ''
   });
 
+  // Fixed program options
+  const PROGRAM_OPTIONS = [
+    { value: 'INICIACION', label: 'Iniciación' },
+    { value: 'FUNCIONAL', label: 'Funcional' },
+  ];
+
   useEffect(() => {
     loadSchedules();
   }, []);
@@ -55,39 +62,41 @@ export default function Programar() {
   // Mapeo para normalizar días de la semana
   const normalizeDayOfWeek = (day: string): string => {
     if (!day) return '';
-    
+
+    const dayLower = day.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Normalizar y quitar acentos para comparación
+
     const dayMap: Record<string, string> = {
-      'monday': 'Lunes', 'lunes': 'Lunes', 'LUNES': 'Lunes',
-      'tuesday': 'Martes', 'martes': 'Martes', 'MARTES': 'Martes',
-      'wednesday': 'Miércoles', 'miercoles': 'Miércoles', 'miércoles': 'Miércoles', 'MIERCOLES': 'Miércoles', 'MIÉRCOLES': 'Miércoles',
-      'thursday': 'Jueves', 'jueves': 'Jueves', 'JUEVES': 'Jueves',
-      'friday': 'Viernes', 'viernes': 'Viernes', 'VIERNES': 'Viernes',
-      'saturday': 'Sábado', 'sabado': 'Sábado', 'sábado': 'Sábado', 'SABADO': 'Sábado', 'SÁBADO': 'Sábado',
-      'sunday': 'Domingo', 'domingo': 'Domingo', 'DOMINGO': 'Domingo',
+      'monday': 'Lunes', 'lunes': 'Lunes',
+      'tuesday': 'Martes', 'martes': 'Martes',
+      'wednesday': 'Miércoles', 'miercoles': 'Miércoles',
+      'thursday': 'Jueves', 'jueves': 'Jueves',
+      'friday': 'Viernes', 'viernes': 'Viernes',
+      'saturday': 'Sábado', 'sabado': 'Sábado',
+      'sunday': 'Domingo', 'domingo': 'Domingo',
     };
-    return dayMap[day.toLowerCase()] || dayMap[day] || day || '';
+    return dayMap[dayLower] || day || '';
   };
 
   const loadSchedules = async () => {
     try {
       const res = await attendanceService.getSchedules();
       const rawSchedules = res.data.data || [];
-      
+
       // Debug: Ver qué datos llegan del backend
       console.log('📅 Raw schedules from backend:', rawSchedules);
-      
+
       // Normalizar los datos del backend
       const normalizedSchedules = rawSchedules.map((s: any) => {
         const dayFromBackend = s.dayOfWeek || s.day_of_week;
         const normalizedDay = normalizeDayOfWeek(dayFromBackend);
-        
+
         // Debug: Ver el mapeo de cada schedule
         console.log(`📋 Schedule "${s.name}": backend day="${dayFromBackend}" → normalized="${normalizedDay}"`);
-        
+
         // Si tiene specific_date pero no day_of_week, calcular el día de la semana
         let finalDay = normalizedDay;
         const specificDate = s.specific_date || s.specificDate; // Manejar ambos formatos
-        
+
         if (!finalDay && specificDate) {
           // Parsear la fecha correctamente (formato YYYY-MM-DD)
           const [year, month, day] = specificDate.split('-').map(Number);
@@ -96,7 +105,7 @@ export default function Programar() {
           finalDay = dayNames[date.getDay()];
           console.log(`📋 Schedule "${s.name}": calculated day from specific_date="${specificDate}" → "${finalDay}"`);
         }
-        
+
         return {
           ...s,
           id: s.external_id || s.id,
@@ -106,7 +115,7 @@ export default function Programar() {
           specific_date: specificDate, // Normalizar el campo
         };
       });
-      
+
       console.log('✅ Normalized schedules:', normalizedSchedules);
       setSchedules(normalizedSchedules);
     } catch (error) {
@@ -132,16 +141,22 @@ export default function Programar() {
       // Construir datos según el tipo de sesión
       const dataToSend: any = {
         name: formData.name,
+        program: formData.program, // Include program in payload
         start_time: formData.start_time,
         end_time: formData.end_time,
         location: formData.location || undefined,
-        capacity: formData.capacity,
+        max_slots: Number(formData.capacity), // Map capacity to max_slots
         description: formData.description || undefined,
       };
 
       if (sessionType === 'recurring') {
         // Sesión recurrente (semanal)
-        dataToSend.day_of_week = formData.day_of_week;
+        const dayMap: Record<string, string> = {
+          'Lunes': 'monday', 'Martes': 'tuesday', 'Miércoles': 'wednesday',
+          'Jueves': 'thursday', 'Viernes': 'friday', 'Sábado': 'saturday', 'Domingo': 'sunday'
+        };
+        dataToSend.day_of_week = dayMap[formData.day_of_week] || formData.day_of_week;
+
         if (formData.start_date) dataToSend.start_date = formData.start_date;
         if (formData.end_date) dataToSend.end_date = formData.end_date;
       } else {
@@ -151,7 +166,7 @@ export default function Programar() {
 
       await attendanceService.createSchedule(dataToSend);
       alert('Sesión creada correctamente');
-      router.push('/pages/attendance/sesiones');
+      router.push('/pages/attendance');
     } catch (error) {
       console.error('Error creating schedule:', error);
       alert('Error al crear la sesión');
@@ -200,6 +215,23 @@ export default function Programar() {
                 placeholder="Ej: Yoga Matutino"
                 className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
               />
+            </div>
+
+            {/* Program Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Programa *</label>
+              <select
+                name="program"
+                value={formData.program}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+              >
+                <option value="">Seleccionar programa...</option>
+                {PROGRAM_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
             </div>
 
             {/* Tipo de sesión */}
@@ -388,6 +420,7 @@ export default function Programar() {
                     {schedulesByDay[day.value].map(s => (
                       <div key={String(s.id)} className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-500">
                         <p className="font-medium text-gray-900 dark:text-white text-sm">{s.name}</p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">{s.program}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {s.start_time} - {s.end_time}
                           {s.location && ` • ${s.location}`}

@@ -28,15 +28,34 @@ export default function Sesiones() {
   const loadSchedules = async () => {
     try {
       const res = await attendanceService.getSchedules();
-      const dayMap: Record<string, string> = {
-        'monday': 'LUNES', 'tuesday': 'MARTES', 'wednesday': 'MIERCOLES',
-        'thursday': 'JUEVES', 'friday': 'VIERNES', 'saturday': 'SABADO', 'sunday': 'DOMINGO'
+
+      // Función para normalizar día (quitar acentos y pasar a mayúsculas)
+      const normalizeDay = (day: string): string => {
+        if (!day) return 'SIN DÍA';
+        const normalized = day.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const dayMap: Record<string, string> = {
+          'monday': 'LUNES', 'lunes': 'LUNES',
+          'tuesday': 'MARTES', 'martes': 'MARTES',
+          'wednesday': 'MIERCOLES', 'miercoles': 'MIERCOLES',
+          'thursday': 'JUEVES', 'jueves': 'JUEVES',
+          'friday': 'VIERNES', 'viernes': 'VIERNES',
+          'saturday': 'SABADO', 'sabado': 'SABADO',
+          'sunday': 'DOMINGO', 'domingo': 'DOMINGO',
+        };
+        return dayMap[normalized] || day.toUpperCase();
       };
+
       const rawData = res.data.data || [];
-      const normalized = rawData.map(s => ({
-        ...s,
-        day_of_week: dayMap[s.day_of_week?.toLowerCase()] || s.day_of_week?.toUpperCase() || 'SIN DÍA'
-      }));
+      const normalized = rawData.map((s: any) => {
+        const dayFromBackend = s.dayOfWeek || s.day_of_week || '';
+        return {
+          ...s,
+          id: s.external_id || s.id,
+          day_of_week: normalizeDay(dayFromBackend),
+          start_time: s.startTime || s.start_time,
+          end_time: s.endTime || s.end_time,
+        };
+      });
       setSchedules(normalized);
     } catch (error) {
       console.error('Error loading schedules:', error);
@@ -65,7 +84,7 @@ export default function Sesiones() {
 
   const handleDelete = async (sessionId: string | number, sessionName: string) => {
     if (!confirm(`¿Estás seguro de eliminar la sesión "${sessionName}"?`)) return;
-    
+
     setDeleting(sessionId);
     try {
       await attendanceService.deleteSchedule(sessionId);
@@ -79,23 +98,31 @@ export default function Sesiones() {
   };
 
   const handleEdit = (session: Schedule) => {
-    setEditingSession({...session});
+    setEditingSession({ ...session });
   };
 
   const handleSaveEdit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingSession) return;
-    
+
     const formData = new FormData(e.currentTarget);
     const sessionId = editingSession.external_id || editingSession.id;
-    
+
+    const dayMap: Record<string, string> = {
+      'LUNES': 'monday', 'MARTES': 'tuesday', 'MIERCOLES': 'wednesday',
+      'JUEVES': 'thursday', 'VIERNES': 'friday', 'SABADO': 'saturday', 'DOMINGO': 'sunday'
+    };
+    const dayValue = editingSession.day_of_week || '';
+
     const data = {
       name: formData.get('name') as string,
+      program: editingSession.program || '', // Include program from state
+      day_of_week: dayMap[dayValue] || dayValue.toLowerCase(), // Map to English
       start_time: formData.get('start_time') as string,
       end_time: formData.get('end_time') as string,
       location: formData.get('location') as string,
     };
-    
+
     try {
       await attendanceService.updateSchedule(sessionId, data);
       setEditingSession(null);
@@ -149,7 +176,7 @@ export default function Sesiones() {
                         <div className="flex items-start justify-between mb-3">
                           <div>
                             <h3 className="font-semibold text-gray-900 dark:text-white">{session.name || 'Sesión'}</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{session.program_name || 'Sin programa'}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{session.program || 'Sin programa'}</p>
                           </div>
                           <div className="flex gap-1">
                             <button
@@ -233,7 +260,7 @@ export default function Sesiones() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Programa</label>
-                <input type="text" defaultValue={editingSession.program_name || ''} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700" disabled />
+                <input type="text" defaultValue={editingSession.program || ''} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700" disabled />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
