@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { attendanceService } from '@/services/attendance.services';
-import type { Schedule, Participant } from '@/types/attendance';
+import type { Schedule, Participant, Program } from '@/types/attendance';
 
 function Loading() {
   return (
@@ -17,11 +17,13 @@ function Loading() {
 export default function Registro() {
   const searchParams = useSearchParams();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [allParticipants, setAllParticipants] = useState<Participant[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [currentProgram, setCurrentProgram] = useState<string | null>(null);
 
   // Si viene de una sesión específica, no mostrar selectores
   const hasPreselectedSession = searchParams.get('session') !== null;
@@ -103,7 +105,9 @@ export default function Registro() {
         id: s.external_id || s.id,
         day_of_week: dayMap[s.dayOfWeek?.toLowerCase() || ''] || dayMap[s.day_of_week?.toLowerCase() || ''] || s.dayOfWeek?.toUpperCase() || 'SIN DÍA',
         start_time: s.startTime || s.start_time,
-        end_time: s.endTime || s.end_time
+        end_time: s.endTime || s.end_time,
+        program_id: s.program_id || s.programId || null,
+        program_name: s.program_name || s.programName || null
       }));
       setSchedules(normalizedSchedules);
       
@@ -114,7 +118,33 @@ export default function Registro() {
         name: p.name || `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim(),
         status: (p.status === 'active' || p.status === 'ACTIVO') ? 'ACTIVO' : 'INACTIVO'
       })) as Participant[];
+      
+      setAllParticipants(normalizedParticipants);
       setParticipants(normalizedParticipants);
+
+      // Si hay una sesión preseleccionada, verificar si tiene programa
+      const sessionId = searchParams.get('session');
+      if (sessionId) {
+        const selectedSession = normalizedSchedules.find(s => s.id === sessionId || s.external_id === sessionId);
+        if (selectedSession?.program_id) {
+          // Cargar participantes del programa
+          try {
+            const programParticipantsRes = await attendanceService.getProgramParticipants(selectedSession.program_id);
+            const programParticipants = programParticipantsRes.data.data || [];
+            const normalizedProgramParticipants = programParticipants.map((p: any) => ({
+              ...p,
+              id: p.external_id || p.id,
+              name: p.name || `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim(),
+              status: (p.status === 'active' || p.status === 'ACTIVO') ? 'ACTIVO' : 'INACTIVO'
+            })) as Participant[];
+            setParticipants(normalizedProgramParticipants);
+            setCurrentProgram(selectedSession.program_name || 'Programa');
+          } catch (error) {
+            console.error('Error loading program participants:', error);
+            // Si falla, usar todos los participantes
+          }
+        }
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -258,10 +288,17 @@ export default function Registro() {
         {/* Attendance List */}
         <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
           <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <span className="material-symbols-outlined text-blue-800">groups</span>
-              Lista de Participantes ({participants.length})
-            </h2>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <span className="material-symbols-outlined text-blue-800">groups</span>
+                Lista de Participantes ({participants.length})
+              </h2>
+              {currentProgram && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Mostrando participantes del programa: <span className="font-medium text-blue-600">{currentProgram}</span>
+                </p>
+              )}
+            </div>
             <div className="flex gap-2">
               <button type="button" onClick={() => markAll('PRESENT')} className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors">
                 Todos Presentes

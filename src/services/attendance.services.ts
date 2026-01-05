@@ -6,7 +6,9 @@ import type {
   AttendanceRecord, 
   AttendanceHistory, 
   SessionDetail,
-  CreateScheduleData 
+  CreateScheduleData,
+  Program,
+  CreateProgramData
 } from '@/types/attendance';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -20,6 +22,59 @@ const getHeaders = () => {
 };
 
 export const attendanceService = {
+  // ==================== PROGRAMAS ====================
+  
+  // Obtener lista de programas
+  async getPrograms() {
+    return axios.get(`${API_URL}/attendance/programs`, {
+      headers: getHeaders(),
+    });
+  },
+
+  // Obtener programas con detalles (conteo de participantes y sesiones)
+  async getProgramsWithDetails() {
+    return axios.get(`${API_URL}/attendance/programs/details`, {
+      headers: getHeaders(),
+    });
+  },
+
+  // Obtener un programa específico con sus participantes
+  async getProgram(externalId: string) {
+    return axios.get(`${API_URL}/attendance/programs/${externalId}`, {
+      headers: getHeaders(),
+    });
+  },
+
+  // Crear un nuevo programa
+  async createProgram(data: CreateProgramData) {
+    return axios.post(`${API_URL}/attendance/programs`, data, {
+      headers: getHeaders(),
+    });
+  },
+
+  // Actualizar un programa
+  async updateProgram(externalId: string, data: Partial<CreateProgramData>) {
+    return axios.put(`${API_URL}/attendance/programs/${externalId}`, data, {
+      headers: getHeaders(),
+    });
+  },
+
+  // Eliminar un programa
+  async deleteProgram(externalId: string) {
+    return axios.delete(`${API_URL}/attendance/programs/${externalId}`, {
+      headers: getHeaders(),
+    });
+  },
+
+  // Obtener participantes de un programa
+  async getProgramParticipants(externalId: string) {
+    return axios.get(`${API_URL}/attendance/programs/${externalId}/participants`, {
+      headers: getHeaders(),
+    });
+  },
+
+  // ==================== SESIONES ====================
+
   // Obtener sesiones de hoy
   async getSessionsToday() {
     return axios.get(`${API_URL}/attendance/sessions/today`, {
@@ -55,6 +110,8 @@ export const attendanceService = {
     });
   },
 
+  // ==================== PARTICIPANTES ====================
+
   // Obtener participantes (solo participantes activos, sin docentes/staff) - para registro de asistencia
   async getParticipants() {
     return axios.get(`${API_URL}/users/participants`, {
@@ -68,6 +125,8 @@ export const attendanceService = {
       headers: getHeaders(),
     });
   },
+
+  // ==================== ASISTENCIA ====================
 
   // Registrar asistencia
   async registerAttendance(data: {
