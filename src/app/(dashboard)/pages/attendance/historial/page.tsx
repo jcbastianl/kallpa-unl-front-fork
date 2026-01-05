@@ -63,7 +63,7 @@ export default function Historial() {
         attendanceService.getHistory(dateFrom, dateTo, undefined, filterDay),
         attendanceService.getSchedules()
       ]);
-      
+
       const dayMap: Record<string, string> = {
         'monday': 'LUNES', 'tuesday': 'MARTES', 'wednesday': 'MIERCOLES',
         'thursday': 'JUEVES', 'friday': 'VIERNES', 'saturday': 'SABADO', 'sunday': 'DOMINGO'
@@ -77,47 +77,55 @@ export default function Historial() {
         end_time: s.endTime || s.end_time
       }));
       setSchedules(normalizedSchedules);
-      
+
       // El backend ya devuelve los datos agrupados, solo normalizamos
       const rawHistory = historyRes.data.data || [];
       const normalizedHistory = normalizeHistoryData(rawHistory);
       setHistory(normalizedHistory);
     } catch (error) {
-      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Normaliza los datos del historial que ya vienen agrupados del backend
+  // Backend now returns pre-aggregated session summaries.
+  // Just normalize the field names if needed and pass through.
+  // Agrupa los registros planos (uno por participante) en resúmenes por sesión
   const normalizeHistoryData = (records: any[]): HistoryRecord[] => {
-    return records.map(r => {
-      // Debug: ver qué campos llegan del backend
-      console.log('History record from backend:', r);
-      
-      // IMPORTANTE: Usar el external_id del SCHEDULE, no del registro de asistencia
-      // La estructura es: { external_id: "asistencia-id", schedule: { external_id: "schedule-id", ... } }
-      const scheduleId = r.schedule?.external_id || r.schedule_external_id || r.schedule_id || r.scheduleId;
-      
-      if (!scheduleId) {
-        console.warn('⚠️ No schedule_id found in record:', r);
-        console.warn('⚠️ r.schedule:', r.schedule);
-      } else {
-        console.log('✅ Using schedule_id:', scheduleId);
+    const groups: Record<string, HistoryRecord> = {};
+
+    records.forEach(r => {
+      // Clave única para agrupar: fecha + id de horario
+      const scheduleId = r.schedule?.external_id || r.schedule_id || '';
+      const date = r.date;
+      const key = `${date}_${scheduleId}`;
+
+      if (!groups[key]) {
+        groups[key] = {
+          date: date,
+          schedule_id: scheduleId,
+          schedule_name: r.schedule?.name || 'Sesión',
+          day_of_week: r.schedule?.day_of_week || '',
+          start_time: r.schedule?.start_time || '',
+          end_time: r.schedule?.end_time || '',
+          presentes: 0,
+          ausentes: 0,
+          total: 0
+        };
       }
-      
-      return {
-        date: r.date,
-        schedule_id: scheduleId,
-        schedule_name: r.schedule?.name || r.schedule_name || r.scheduleName || 'Sesión',
-        day_of_week: r.schedule?.day_of_week || r.day_of_week || r.dayOfWeek || '',
-        start_time: r.schedule?.start_time || r.start_time || r.startTime || '',
-        end_time: r.schedule?.end_time || r.end_time || r.endTime || '',
-        presentes: r.presentes || 0,
-        ausentes: r.ausentes || 0,
-        total: r.total || 0
-      };
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      // Incrementar contadores según estado
+      const status = r.status?.toUpperCase();
+      if (status === 'PRESENT') {
+        groups[key].presentes++;
+      } else if (status === 'ABSENT') {
+        groups[key].ausentes++;
+      }
+      groups[key].total++;
+    });
+
+    // Convertir el objeto agrupado en array y ordenar por fecha descendente
+    return Object.values(groups).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
 
   const loadHistory = async () => {
@@ -127,40 +135,96 @@ export default function Historial() {
       const normalizedHistory = normalizeHistoryData(rawHistory);
       setHistory(normalizedHistory);
     } catch (error) {
-      console.error('Error loading history:', error);
     }
   };
 
   const viewDetail = async (scheduleId: string, date: string) => {
+    if (!scheduleId) return; // Prevent invalid URL request
     try {
       const res = await attendanceService.getSessionDetail(scheduleId, date);
-      setSessionDetail(res.data.data);
+
+      let records: any[] = [];
+      let sessionStats: any = null;
+      let scheduleInfo: any = null;
+
+      // Detectar si la respuesta es un array plano (lista de asistencias) o un objeto estructurado
+      const responseData = res.data.data;
+
+      if (Array.isArray(responseData)) {
+        // Es un array plano
+        records = responseData;
+        // Tomamos info del horario del primer registro si existe
+        if (records.length > 0) {
+          scheduleInfo = records[0].schedule;
+        }
+      } else if (responseData && typeof responseData === 'object') {
+        // Es un objeto estructurado { records: [], stats: {}, schedule: {} }
+        records = responseData.records || [];
+        sessionStats = responseData.stats;
+        scheduleInfo = responseData.schedule;
+      }
+
+
+
+      if (records.length === 0) {
+        alert('No se encontraron registros de asistencia para esta sesión');
+        return;
+      }
+
+      // Map records to the expected attendances format
+      const attendances = records.map((r: any) => ({
+        participant: {
+          id: r.participant?.external_id || r.participant?.id,
+          name: r.participant?.first_name
+            ? `${r.participant.first_name} ${r.participant.last_name}`.trim()
+            : (r.participant_name || 'Participante')
+        },
+        status: r.status
+      }));
+
+      // Use stats from backend directly, or compute if missing
+      const stats = sessionStats || {
+        present: attendances.filter((a: any) => a.status?.toUpperCase() === 'PRESENT').length,
+        absent: attendances.filter((a: any) => a.status?.toUpperCase() === 'ABSENT').length,
+        total: attendances.length
+      };
+
+      // Map backend field names (presentes/ausentes) to expected (present/absent)
+      const normalizedStats = {
+        present: stats.presentes ?? stats.present ?? 0,
+        absent: stats.ausentes ?? stats.absent ?? 0,
+        total: stats.total ?? attendances.length
+      };
+
+      const sessionDetail = {
+        date,
+        schedule: scheduleInfo || { external_id: scheduleId, name: 'Sesión' },
+        attendances,
+        stats: normalizedStats
+      };
+
+      setSessionDetail(sessionDetail as SessionDetail);
       setShowModal(true);
     } catch (error) {
-      console.error('Error loading session detail:', error);
+      alert('Error al cargar los detalles de la sesión');
     }
   };
 
   const handleDelete = async (scheduleId: string, date: string, scheduleName: string) => {
-    // Debug: verificar que scheduleId tenga valor
-    console.log('🗑️ Delete request - scheduleId:', scheduleId, 'date:', date);
-    
     if (!scheduleId) {
-      alert('Error: No se encontró el ID del horario. Revisa la consola para más detalles.');
-      console.error('❌ scheduleId is undefined or empty!');
+      alert('Error: No se encontró el ID del horario.');
       return;
     }
-    
+
     if (!confirm(`¿Estás seguro de eliminar la asistencia de "${scheduleName}" del ${date}?\n\nEsta acción no se puede deshacer.`)) {
       return;
     }
-    
+
     try {
       await attendanceService.deleteSessionAttendance(scheduleId, date);
       loadHistory();
       alert('Registro de asistencia eliminado correctamente');
     } catch (error) {
-      console.error('Error deleting attendance:', error);
       alert('Error al eliminar el registro');
     }
   };
@@ -178,12 +242,12 @@ export default function Historial() {
     const [year, month, day] = dateStr.split('-').map(Number);
     const date = new Date(year, month - 1, day, 12, 0, 0);
     const monthName = date.toLocaleDateString('es-ES', { month: 'short' });
-    
+
     // Usar el día del backend si está disponible, sino calcular (fallback)
-    const dayName = dayOfWeek 
+    const dayName = dayOfWeek
       ? dayNameMap[dayOfWeek.toLowerCase()] || dayOfWeek.substring(0, 3).toLowerCase()
       : date.toLocaleDateString('es-ES', { weekday: 'short' });
-    
+
     return `${dayName}, ${day} ${monthName}`;
   };
 
@@ -310,11 +374,11 @@ export default function Historial() {
             <div className="p-6 overflow-y-auto max-h-[60vh]">
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-center">
-                  <p className="text-2xl font-bold text-green-600">{sessionDetail.stats?.presentes || 0}</p>
+                  <p className="text-2xl font-bold text-green-600">{sessionDetail.stats?.present || 0}</p>
                   <p className="text-xs text-green-700 dark:text-green-400">Presentes</p>
                 </div>
                 <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg text-center">
-                  <p className="text-2xl font-bold text-red-600">{sessionDetail.stats?.ausentes || 0}</p>
+                  <p className="text-2xl font-bold text-red-600">{sessionDetail.stats?.absent || 0}</p>
                   <p className="text-xs text-red-700 dark:text-red-400">Ausentes</p>
                 </div>
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-center">
@@ -322,21 +386,25 @@ export default function Historial() {
                   <p className="text-xs text-blue-700 dark:text-blue-400">Total</p>
                 </div>
               </div>
-              
+
               <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Lista de Asistencia</h4>
               <div className="space-y-2">
-                {sessionDetail.records?.map((r, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <span className="font-medium text-gray-900 dark:text-white">{r.participant_name}</span>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                      r.status === 'PRESENT' ? 'bg-green-100 text-green-700' :
-                      r.status === 'ABSENT' ? 'bg-red-100 text-red-700' :
-                      'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {r.status === 'PRESENT' ? 'Presente' : r.status === 'ABSENT' ? 'Ausente' : 'Justificado'}
-                    </span>
-                  </div>
-                ))}
+                {(sessionDetail.attendances || []).length > 0 ? (
+                  (sessionDetail.attendances || []).map((r: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {r.participant?.name || r.participant?.first_name || r.participant?.firstName || 'Participante'}
+                      </span>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${r.status?.toUpperCase() === 'PRESENT' ? 'bg-green-100 text-green-700' :
+                        'bg-red-100 text-red-700'
+                        }`}>
+                        {r.status?.toUpperCase() === 'PRESENT' ? 'Presente' : 'Ausente'}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-center py-4">No hay registros de participantes.</p>
+                )}
               </div>
             </div>
           </div>

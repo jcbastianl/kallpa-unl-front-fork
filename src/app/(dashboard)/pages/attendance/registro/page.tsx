@@ -24,6 +24,7 @@ export default function Registro() {
   const [success, setSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentProgram, setCurrentProgram] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Si viene de una sesión específica, no mostrar selectores
   const hasPreselectedSession = searchParams.get('session') !== null;
@@ -41,6 +42,20 @@ export default function Registro() {
     loadData();
   }, []);
 
+  // Recargar participantes cuando la página vuelve a estar visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && currentProgram) {
+        refreshParticipants();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [currentProgram]);
+
   useEffect(() => {
     const sessionParam = searchParams.get('session');
     const dateParam = searchParams.get('date');
@@ -56,14 +71,15 @@ export default function Registro() {
   }, [participants, searchParams]);
 
   const loadExistingAttendance = async (scheduleId: string, date: string) => {
+    if (!scheduleId) return;
     try {
       const res = await attendanceService.getSessionDetail(scheduleId, date);
       const records = res.data.data?.records || [];
-      
+
       if (records.length > 0) {
         setIsEditing(true);
         const existingAttendance: Record<string, string> = {};
-        records.forEach(r => {
+        records.forEach((r: any) => {
           existingAttendance[r.participant_id] = r.status;
         });
         participants.forEach(p => {
@@ -90,19 +106,18 @@ export default function Registro() {
 
   const loadData = async () => {
     try {
-      const [schedulesRes, participantsRes] = await Promise.all([
-        attendanceService.getSchedules(),
-        attendanceService.getParticipants()
-      ]);
-      
+      // First, load all schedules
+      const schedulesRes = await attendanceService.getSchedules();
+
       const dayMap: Record<string, string> = {
         'monday': 'LUNES', 'tuesday': 'MARTES', 'wednesday': 'MIERCOLES',
         'thursday': 'JUEVES', 'friday': 'VIERNES', 'saturday': 'SABADO', 'sunday': 'DOMINGO'
       };
       const rawSchedules = schedulesRes.data.data || [];
-      const normalizedSchedules = rawSchedules.map(s => ({
+      const normalizedSchedules = rawSchedules.map((s: any) => ({
         ...s,
         id: s.external_id || s.id,
+        program: s.program || '',
         day_of_week: dayMap[s.dayOfWeek?.toLowerCase() || ''] || dayMap[s.day_of_week?.toLowerCase() || ''] || s.dayOfWeek?.toUpperCase() || 'SIN DÍA',
         start_time: s.startTime || s.start_time,
         end_time: s.endTime || s.end_time,
@@ -110,45 +125,77 @@ export default function Registro() {
         program_name: s.program_name || s.programName || null
       }));
       setSchedules(normalizedSchedules);
-      
+
+      // If there's a preselected session, load participants for that schedule's program
+      const sessionId = searchParams.get('session');
+      if (sessionId) {
+        const selectedSched = normalizedSchedules.find((s: Schedule) => String(s.id) === sessionId);
+        if (selectedSched?.program) {
+          await loadParticipantsByProgram(selectedSched.program);
+        } else {
+          // Fallback: load all participants if no program
+          await loadParticipantsByProgram();
+        }
+      } else {
+        // No preselection - don't load participants yet
+        setParticipants([]);
+      }
+    } catch (error) {
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadParticipantsByProgram = async (program?: string) => {
+    try {
+      const participantsRes = await attendanceService.getParticipantsByProgram(program);
       const rawParticipants = participantsRes.data.data || [];
-      const normalizedParticipants = rawParticipants.map(p => ({
+      const normalizedParticipants = rawParticipants.map((p: any) => ({
         ...p,
         id: p.external_id || p.id,
         name: p.name || `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim(),
         status: (p.status === 'active' || p.status === 'ACTIVO') ? 'ACTIVO' : 'INACTIVO'
       })) as Participant[];
-      
+
       setAllParticipants(normalizedParticipants);
       setParticipants(normalizedParticipants);
 
-      // Si hay una sesión preseleccionada, verificar si tiene programa
-      const sessionId = searchParams.get('session');
-      if (sessionId) {
-        const selectedSession = normalizedSchedules.find(s => s.id === sessionId || s.external_id === sessionId);
-        if (selectedSession?.program_id) {
-          // Cargar participantes del programa
-          try {
-            const programParticipantsRes = await attendanceService.getProgramParticipants(selectedSession.program_id);
-            const programParticipants = programParticipantsRes.data.data || [];
-            const normalizedProgramParticipants = programParticipants.map((p: any) => ({
-              ...p,
-              id: p.external_id || p.id,
-              name: p.name || `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim(),
-              status: (p.status === 'active' || p.status === 'ACTIVO') ? 'ACTIVO' : 'INACTIVO'
-            })) as Participant[];
-            setParticipants(normalizedProgramParticipants);
-            setCurrentProgram(selectedSession.program_name || 'Programa');
-          } catch (error) {
-            console.error('Error loading program participants:', error);
-            // Si falla, usar todos los participantes
-          }
-        }
+      if (program) {
+        setCurrentProgram(program);
       }
     } catch (error) {
-      console.error('Error loading data:', error);
+      setParticipants([]);
+    }
+  };
+
+  const refreshParticipants = async () => {
+    setRefreshing(true);
+    try {
+      // Load participants - filtered by program if available, otherwise all
+      const participantsRes = await attendanceService.getParticipantsByProgram(currentProgram || undefined);
+      const rawParticipants = participantsRes.data.data || [];
+      const normalizedParticipants = rawParticipants.map((p: any) => ({
+        ...p,
+        id: p.external_id || p.id,
+        name: p.name || `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim(),
+        status: (p.status === 'active' || p.status === 'ACTIVO') ? 'ACTIVO' : 'INACTIVO'
+      })) as Participant[];
+
+      // Mantener el estado de asistencia de los participantes existentes
+      // y agregar los nuevos con estado 'PRESENT' por defecto
+      const newAttendance = { ...attendance };
+      normalizedParticipants.forEach(p => {
+        if (!(p.id in newAttendance)) {
+          newAttendance[p.id] = 'PRESENT';
+        }
+      });
+
+      setAllParticipants(normalizedParticipants);
+      setParticipants(normalizedParticipants);
+      setAttendance(newAttendance);
+    } catch (error) {
     } finally {
-      setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -169,7 +216,7 @@ export default function Registro() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedSchedule) {
       alert('Selecciona una sesión');
       return;
@@ -180,32 +227,22 @@ export default function Registro() {
 
     try {
       const records = Object.entries(attendance).map(([participantId, status]) => ({
-        participant_id: participantId,
+        participant_external_id: participantId,
         status: status.toLowerCase() // Backend espera minúsculas: present, absent, justified
       }));
 
       const requestData = {
-        schedule_id: selectedSchedule,
+        schedule_external_id: selectedSchedule,
         date: selectedDate,
-        records
+        attendances: records
       };
-      
-      // Debug: Log del request que se envía
-      console.log('📤 Enviando registro de asistencia:', requestData);
-      console.log('📋 schedule_id:', selectedSchedule);
-      console.log('📅 date:', selectedDate);
-      console.log('👥 records:', records);
 
       const response = await attendanceService.registerAttendance(requestData);
-      
-      // Debug: Log de la respuesta
-      console.log('✅ Respuesta del backend:', response.data);
 
       setSuccess(true);
       setIsEditing(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (error) {
-      console.error('Error saving attendance:', error);
       alert('Error al guardar la asistencia');
     } finally {
       setSaving(false);
@@ -252,7 +289,7 @@ export default function Registro() {
             <span className="material-symbols-outlined text-blue-800">event</span>
             Información de la Sesión
           </h2>
-          
+
           {hasPreselectedSession && selectedScheduleData ? (
             // Vista simplificada cuando viene de sesiones
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
@@ -277,7 +314,7 @@ export default function Registro() {
                 <div>
                   <p className="font-medium text-yellow-800 dark:text-yellow-300">Selecciona una sesión desde el Dashboard</p>
                   <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                    Ve al Dashboard y haz clic en "Registrar Asistencia" en la sesión que deseas registrar.
+                    Ve al Dashboard y haz clic en &quot;Registrar Asistencia&quot; en la sesión que deseas registrar.
                   </p>
                 </div>
               </div>
@@ -299,7 +336,17 @@ export default function Registro() {
                 </p>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={refreshParticipants}
+                disabled={refreshing}
+                className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors disabled:opacity-50 flex items-center gap-1"
+                title="Actualizar lista de participantes"
+              >
+                <span className={`material-symbols-outlined text-base ${refreshing ? 'animate-spin' : ''}`}>refresh</span>
+                {refreshing ? 'Actualizando...' : 'Actualizar'}
+              </button>
               <button type="button" onClick={() => markAll('PRESENT')} className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors">
                 Todos Presentes
               </button>
@@ -325,20 +372,18 @@ export default function Registro() {
                   {[
                     { value: 'PRESENT', label: 'P', color: 'green', title: 'Presente' },
                     { value: 'ABSENT', label: 'A', color: 'red', title: 'Ausente' },
-                    { value: 'JUSTIFIED', label: 'J', color: 'yellow', title: 'Justificado' },
                   ].map(status => (
                     <button
                       key={status.value}
                       type="button"
                       title={status.title}
                       onClick={() => handleStatusChange(p.id, status.value)}
-                      className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${
-                        attendance[p.id] === status.value
-                          ? status.color === 'green' ? 'bg-green-500 text-white ring-2 ring-green-300' :
-                            status.color === 'red' ? 'bg-red-500 text-white ring-2 ring-red-300' :
+                      className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${attendance[p.id] === status.value
+                        ? status.color === 'green' ? 'bg-green-500 text-white ring-2 ring-green-300' :
+                          status.color === 'red' ? 'bg-red-500 text-white ring-2 ring-red-300' :
                             'bg-yellow-500 text-white ring-2 ring-yellow-300'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
                     >
                       {status.label}
                     </button>

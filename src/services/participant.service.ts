@@ -1,6 +1,6 @@
 import { Participant } from "@/types/participant";
 
-const API_URL = "http://localhost:5000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 export const participantService = {
   getHeaders() {
@@ -157,9 +157,9 @@ export const participantService = {
     return result;
   },
 
-  
+
   async getPasantes(): Promise<Participant[]> {
-    const response = await fetch(`${API_URL}/users/pasantes`, {
+    const response = await fetch(`${API_URL}/users`, {
       method: "GET",
       headers: this.getHeaders(),
     });
@@ -171,53 +171,57 @@ export const participantService = {
     const result = await response.json();
     const list = Array.isArray(result) ? result : result.data || [];
 
-    return list.map((p: any) => ({
-      id: p.external_id || p.java_external || p.id?.toString() || p.dni,
-      firstName: p.firstName || p.first_name || "",
-      lastName: p.lastName || p.last_name || "",
-      dni: p.dni || p.identification || "",
-      email: p.email || "",
-      phone: p.phone || p.phono || "",
-      address: p.address || p.direction || "",
-      age: p.age || 0,
-      type: p.type || "PASANTE",
-      role: p.role || "USER",
-      status: p.status || "ACTIVO",
-    }));
+    return list
+      .map((p: any) => ({
+        id: p.external_id || p.java_external || p.id?.toString() || p.dni,
+        firstName: p.firstName || p.first_name || "",
+        lastName: p.lastName || p.last_name || "",
+        dni: p.dni || p.identification || "",
+        email: p.email || "",
+        phone: p.phone || p.phono || "",
+        address: p.address || p.direction || "",
+        age: p.age || 0,
+        type: p.type || "PASANTE",
+        role: p.role || "USER",
+        status: p.status || "ACTIVO",
+      }))
+      .filter((p: any) => p.type === 'PASANTE');
   },
 
-  //Metodo adicional revisar Josep
+  // Método para crear participante y manejar errores del backend
   async createParticipant(data: any) {
     const isMinor = data.age < 18 || data.type === "INICIACION";
 
     const payload = isMinor
       ? {
-          type: "INICIACION",
-          participant: {
-            firstName: data.firstName,
-            lastName: data.lastName,
-            age: data.age,
-            dni: data.dni,
-            phone: data.phone || "",
-            email: data.email || "",
-            address: data.address || "",
-          },
-          responsible: {
-            name: data.responsibleName,
-            dni: data.responsibleDni,
-            phone: data.responsiblePhone,
-          },
-        }
-      : {
+        type: "INICIACION",
+        program: data.program,
+        participant: {
           firstName: data.firstName,
           lastName: data.lastName,
           age: data.age,
           dni: data.dni,
           phone: data.phone || "",
-          email: data.email || `${data.dni}@participante.local`,
+          email: data.email || "",
           address: data.address || "",
-          type: data.type,
-        };
+        },
+        responsible: {
+          name: data.responsibleName,
+          dni: data.responsibleDni,
+          phone: data.responsiblePhone,
+        },
+      }
+      : {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        age: data.age,
+        dni: data.dni,
+        phone: data.phone || "",
+        email: data.email || `${data.dni}@participante.local`,
+        address: data.address || "",
+        type: data.type,
+        program: data.program,
+      };
 
     const response = await fetch(`${API_URL}/save-participants`, {
       method: "POST",
@@ -228,8 +232,8 @@ export const participantService = {
     const result = await response.json();
 
     if (!response.ok) {
-      throw result; // 🔥 lanzamos TODO el error del backend
-    }    
+      throw result;
+    }
 
     return result;
   },

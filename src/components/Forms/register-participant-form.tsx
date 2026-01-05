@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import InputGroup from "@/components/FormElements/InputGroup";
 import { participantService } from "@/services/participant.service";
 import { Select } from "../FormElements/select";
@@ -8,7 +8,8 @@ import { Alert } from "@/components/ui-elements/alert";
 import ErrorMessage from "../FormElements/errormessage";
 import { ShowcaseSection } from "../Layouts/showcase-section";
 
-export const RegisterParticipantForm = () => {
+// Estado inicial del formulario y configuración de alertas
+const RegisterParticipantForm = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showAlert, setShowAlert] = useState(false);
@@ -17,6 +18,7 @@ export const RegisterParticipantForm = () => {
   >("success");
   const [alertTitle, setAlertTitle] = useState("");
   const [alertDescription, setAlertDescription] = useState("");
+
   const triggerAlert = (
     variant: "success" | "error" | "warning",
     title: string,
@@ -32,33 +34,27 @@ export const RegisterParticipantForm = () => {
     }, 3000);
   };
 
-  // const [formData, setFormData] = useState({
-  //   firstName: "",
-  //   lastName: "",
-  //   dni: "",
-  //   type: "ESTUDIANTE",
-  //   phone: "",
-  //   address: "",
-  //   age: "",
-  //   email: "",
-  // });
-
-  //logica revisar josep
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     dni: "",
     type: "",
+    program: "",
     phone: "",
     address: "",
     age: "",
     email: "",
-
-    //SOLO PARA MENORES
     responsibleName: "",
     responsibleDni: "",
     responsiblePhone: "",
   });
+
+  // Regla para restringir programas según edad (> 18 solo Funcional)
+  useEffect(() => {
+    if (Number(formData.age) > 18 && formData.program === "INICIACION") {
+      setFormData((prev) => ({ ...prev, program: "FUNCIONAL" }));
+    }
+  }, [formData.age, formData.program]);
 
   const isMinor = Number(formData.age) > 0 && Number(formData.age) < 18;
   const clearFieldError = (field: string) => {
@@ -78,6 +74,18 @@ export const RegisterParticipantForm = () => {
     { value: "PARTICIPANTE", label: "Participante General" },
   ];
 
+  // Opciones base
+  const allProgramOptions = [
+    { value: "", label: "Seleccione un programa" },
+    { value: "INICIACION", label: "Iniciación" },
+    { value: "FUNCIONAL", label: "Funcional" },
+  ];
+
+  // Filtrar opciones si es mayor a 18 años
+  const programOptions = Number(formData.age) > 18
+    ? allProgramOptions.filter(p => p.value !== "INICIACION")
+    : allProgramOptions;
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -92,7 +100,53 @@ export const RegisterParticipantForm = () => {
     setErrors({});
 
     try {
-      const response = await participantService.createParticipant({
+      if (!formData.firstName)
+        errors.firstName = "Nombre requerido";
+
+      if (!formData.lastName)
+        errors.lastName = "Apellido requerido";
+
+      if (!formData.dni || formData.dni.length < 10)
+        errors.dni = "La cédula debe tener al menos 10 dígitos";
+
+      if (!formData.age)
+        errors.age = "Edad requerida";
+
+      if (!formData.type)
+        errors.type = "Tipo de participante requerido";
+
+      if (!formData.program)
+        errors.program = "Programa requerido (INICIACION o FUNCIONAL)";
+
+      if (formData.email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+          errors.email = "Email no válido";
+        }
+      }
+
+      if (!formData.phone)
+        errors.phone = "Celular requerido";
+      else if (formData.phone.length < 10)
+        errors.phone = "Celular no válido";
+
+      if (!formData.address)
+        errors.address = "Dirección requerida";
+
+      if (isMinor) {
+        if (!formData.responsibleName)
+          errors.responsibleName = "Nombre del responsable requerido";
+        if (!formData.responsibleDni)
+          errors.responsibleDni = "Cédula del responsable requerida";
+        if (!formData.responsiblePhone)
+          errors.responsiblePhone = "Teléfono del responsable requerido";
+      }
+
+      if (Object.keys(errors).length > 0) {
+        setErrors(errors);
+        return;
+      }
+      await participantService.createParticipant({
         ...formData,
         age: formData.age ? parseInt(formData.age) : 0,
       });
@@ -107,6 +161,7 @@ export const RegisterParticipantForm = () => {
         lastName: "",
         dni: "",
         type: "ESTUDIANTE",
+        program: "",
         phone: "",
         address: "",
         age: "",
@@ -215,6 +270,20 @@ export const RegisterParticipantForm = () => {
             />
             <ErrorMessage message={errors.type} />
           </div>
+        </div>
+
+
+        <div className="mb-4.5">
+          <Select
+            name="program"
+            label="Programa *"
+            items={programOptions}
+            placeholder="Seleccione programa"
+            value={formData.program}
+            onChange={(e) => handleChange(e)}
+            className="w-full"
+          />
+          <ErrorMessage message={errors.program} />
         </div>
 
         <div className="mb-4.5 flex flex-col gap-6 xl:flex-row">
@@ -335,3 +404,5 @@ export const RegisterParticipantForm = () => {
     </ShowcaseSection>
   );
 };
+
+export { RegisterParticipantForm };

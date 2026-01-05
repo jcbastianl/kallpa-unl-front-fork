@@ -12,7 +12,7 @@ export function MeasurementStats({ dateFrom, dateTo }: { dateFrom?: string, date
       .then((res) => {
         // Agrupar por fecha
         const grouped: Record<string, { bmi: number[]; weight: number[]; height: number[] }> = {};
-  
+
         res.forEach(a => {
           if (!grouped[a.date]) {
             grouped[a.date] = { bmi: [], weight: [], height: [] };
@@ -21,15 +21,15 @@ export function MeasurementStats({ dateFrom, dateTo }: { dateFrom?: string, date
           grouped[a.date].weight.push(a.weight);
           grouped[a.date].height.push(a.height);
         });
-  
+
         // Calcular promedios
         const averaged = Object.entries(grouped).map(([date, values]) => ({
           date,
-          avg_bmi: values.bmi.reduce((a,b)=>a+b,0)/values.bmi.length,
-          avg_weight: values.weight.reduce((a,b)=>a+b,0)/values.weight.length,
-          avg_height: values.height.reduce((a,b)=>a+b,0)/values.height.length,
+          avg_bmi: values.bmi.reduce((a, b) => a + b, 0) / values.bmi.length,
+          avg_weight: values.weight.reduce((a, b) => a + b, 0) / values.weight.length,
+          avg_height: values.height.reduce((a, b) => a + b, 0) / values.height.length,
         }));
-  
+
         setData(averaged);
       })
       .catch(console.error);
@@ -41,7 +41,7 @@ export function MeasurementStats({ dateFrom, dateTo }: { dateFrom?: string, date
     { name: "Altura", data: data.map(d => d.avg_height) },
   ];
 
-  const options = {
+  const options: any = {
     chart: { type: "line", height: 350 },
     xaxis: { categories: data.map(d => d.date) },
     stroke: { curve: "smooth" },
