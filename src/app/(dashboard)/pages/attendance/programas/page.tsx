@@ -5,14 +5,14 @@ import { attendanceService } from '@/services/attendance.services';
 import type { Program, Participant } from '@/types/attendance';
 
 const COLORS = [
-  { value: '#3B82F6'},
+  { value: '#3B82F6' },
   { value: '#10B981' },
   { value: '#F59E0B' },
   { value: '#EF4444' },
-  { value: '#8B5CF6'},
-  { value: '#EC4899'},
-  { value: '#06B6D4'},
-  { value: '#F97316'},
+  { value: '#8B5CF6' },
+  { value: '#EC4899' },
+  { value: '#06B6D4' },
+  { value: '#F97316' },
 ];
 
 function Loading() {
@@ -30,7 +30,7 @@ export default function ProgramasPage() {
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-  
+
   // Estado para ver participantes de un programa
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
   const [programParticipants, setProgramParticipants] = useState<Participant[]>([]);
@@ -49,10 +49,9 @@ export default function ProgramasPage() {
 
   const loadPrograms = async () => {
     try {
-      const res = await attendanceService.getProgramsWithDetails();
+      const res = await attendanceService.getPrograms();
       setPrograms(res.data.data || []);
     } catch (error) {
-      console.error('Error loading programs:', error);
     } finally {
       setLoading(false);
     }
@@ -98,7 +97,6 @@ export default function ProgramasPage() {
       handleCloseModal();
       loadPrograms();
     } catch (error) {
-      console.error('Error saving program:', error);
       alert('Error al guardar el programa');
     } finally {
       setSaving(false);
@@ -116,7 +114,6 @@ export default function ProgramasPage() {
       alert('Programa eliminado correctamente');
       loadPrograms();
     } catch (error) {
-      console.error('Error deleting program:', error);
       alert('Error al eliminar el programa');
     } finally {
       setDeleting(null);
@@ -137,7 +134,6 @@ export default function ProgramasPage() {
       }));
       setProgramParticipants(normalized);
     } catch (error) {
-      console.error('Error loading participants:', error);
       setProgramParticipants([]);
     } finally {
       setLoadingParticipants(false);
@@ -200,19 +196,19 @@ export default function ProgramasPage() {
               className="bg-white dark:bg-gray-dark rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow duration-200"
             >
               {/* Color bar */}
-              <div 
-                className="h-1.5" 
+              <div
+                className="h-1.5"
                 style={{ backgroundColor: program.color || '#3B82F6' }}
               />
-              
+
               <div className="p-5">
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-4">
-                  <div 
+                  <div
                     className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
                     style={{ backgroundColor: `${program.color || '#3B82F6'}15` }}
                   >
-                    <span 
+                    <span
                       className="material-symbols-outlined text-2xl"
                       style={{ color: program.color || '#3B82F6' }}
                     >
@@ -258,7 +254,7 @@ export default function ProgramasPage() {
                   <button
                     onClick={() => handleViewParticipants(program)}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-colors"
-                    style={{ 
+                    style={{
                       backgroundColor: `${program.color || '#3B82F6'}15`,
                       color: program.color || '#3B82F6'
                     }}
@@ -300,7 +296,7 @@ export default function ProgramasPage() {
                 {editingProgram ? 'Editar Programa' : 'Nuevo Programa'}
               </h2>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -339,11 +335,10 @@ export default function ProgramasPage() {
                       key={color.value}
                       type="button"
                       onClick={() => setFormData({ ...formData, color: color.value })}
-                      className={`w-10 h-10 rounded-lg transition-all ${
-                        formData.color === color.value 
-                          ? 'ring-2 ring-offset-2 ring-gray-400 dark:ring-offset-gray-800' 
+                      className={`w-10 h-10 rounded-lg transition-all ${formData.color === color.value
+                          ? 'ring-2 ring-offset-2 ring-gray-400 dark:ring-offset-gray-800'
                           : 'hover:scale-110'
-                      }`}
+                        }`}
                       style={{ backgroundColor: color.value }}
                     />
                   ))}
@@ -392,7 +387,7 @@ export default function ProgramasPage() {
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
-            
+
             <div className="p-6 overflow-y-auto max-h-[60vh]">
               {loadingParticipants ? (
                 <Loading />
@@ -425,11 +420,10 @@ export default function ProgramasPage() {
                           </p>
                         )}
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        participant.status === 'active' || participant.status === 'ACTIVO'
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${participant.status === 'active' || participant.status === 'ACTIVO'
                           ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                           : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
-                      }`}>
+                        }`}>
                         {participant.status === 'active' || participant.status === 'ACTIVO' ? 'Activo' : participant.status}
                       </span>
                     </div>

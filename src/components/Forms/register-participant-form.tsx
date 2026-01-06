@@ -32,18 +32,6 @@ export const RegisterParticipantForm = () => {
     }, 3000);
   };
 
-  // const [formData, setFormData] = useState({
-  //   firstName: "",
-  //   lastName: "",
-  //   dni: "",
-  //   type: "ESTUDIANTE",
-  //   phone: "",
-  //   address: "",
-  //   age: "",
-  //   email: "",
-  // });
-
-  //logica revisar josep
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -53,6 +41,7 @@ export const RegisterParticipantForm = () => {
     address: "",
     age: "",
     email: "",
+    program: "",
 
     //SOLO PARA MENORES
     responsibleName: "",
@@ -77,7 +66,11 @@ export const RegisterParticipantForm = () => {
     { value: "EXTERNO", label: "Externo" },
     { value: "PARTICIPANTE", label: "Participante General" },
   ];
-
+  const TypeOptions = [
+    { value: "", label: "Seleccione un programa" },
+    { value: "INICIACION", label: "Iniciación" },
+    { value: "FUNCIONAL", label: "Funcional" },
+  ];
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -114,6 +107,7 @@ export const RegisterParticipantForm = () => {
         responsibleName: "",
         responsibleDni: "",
         responsiblePhone: "",
+        program: "",
       });
     } catch (err: any) {
       if (err?.data && typeof err.data === "object") {
@@ -208,7 +202,7 @@ export const RegisterParticipantForm = () => {
               name="type"
               label="Tipo"
               items={participantTypeOptions}
-              placeholder="Estudiante"
+              placeholder=""
               value={formData.type}
               onChange={(e) => handleChange(e)}
               className="w-full"
@@ -243,6 +237,18 @@ export const RegisterParticipantForm = () => {
           </div>
         </div>
 
+        <div className="xl:col-span-5">
+          <Select
+            name="program"
+            label="Seleccione un programa"
+            items={TypeOptions}
+            placeholder=""
+            value={formData.program}
+            onChange={(e) => handleChange(e)}
+            className="w-full"
+          />
+          <ErrorMessage message={errors.program} />
+        </div>
         <div className="mb-4.5">
           <InputGroup
             label="Dirección"
@@ -253,7 +259,6 @@ export const RegisterParticipantForm = () => {
             value={formData.address}
             handleChange={handleChange}
           />
-          <ErrorMessage message={errors.address} />
         </div>
 
         <div className="relative mb-8 mt-10 flex items-center justify-center">

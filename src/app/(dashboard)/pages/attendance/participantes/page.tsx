@@ -37,11 +37,22 @@ export default function Participantes() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('ALL');
   const [pasantesData, setPasantesData] = useState<Participant[]>([]);
+  const [programFilter, setProgramFilter] = useState('');
+  const [attendanceStats, setAttendanceStats] = useState<Record<string, { present: number; total: number; percentage: number }>>({});
+
+  // Fixed program options
+  const PROGRAM_OPTIONS = [
+    { value: '', label: 'Todos los programas' },
+    { value: 'INICIACION', label: 'Iniciación' },
+    { value: 'FUNCIONAL', label: 'Funcional' },
+  ];
 
   useEffect(() => {
     loadParticipants();
-    loadPasantes(); // Cargar pasantes desde el endpoint específico
+    loadPasantes();
   }, []);
+
+
 
   useEffect(() => {
     applyFilters();
@@ -52,7 +63,7 @@ export default function Participantes() {
       // Usar getAllUsers para obtener todos los usuarios incluyendo profesores
       const res = await attendanceService.getAllUsers();
       const rawData = res.data.data || [];
-      const normalized = rawData.map(p => ({
+      const normalized = rawData.map((p: any) => ({
         ...p,
         id: p.external_id || p.id,
         name: p.name || `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim(),
@@ -61,7 +72,6 @@ export default function Participantes() {
       })) as Participant[];
       setParticipants(normalized);
     } catch (error) {
-      console.error('Error loading participants:', error);
     } finally {
       setLoading(false);
     }
@@ -80,7 +90,45 @@ export default function Participantes() {
       })) as Participant[];
       setPasantesData(normalized);
     } catch (error) {
-      console.error('Error loading pasantes:', error);
+    }
+  };
+
+  // Load attendance stats
+  // Note: Backend v2/public/participants now returns attendance_percentage directly.
+  // However, we still fetch history if we need detailed per-program calculation not provided by the main endpoint based on filter.
+  // If the backend returns percentage in getParticipantsRes, we can use that.
+  // But for now, we'll keep this logic as a robust fallback or for confirming filtering.
+  // Actually, let's update this to be simpler and use what we have, 
+  // or just rely on the main participants list if it has the data.
+  // Given the backend guide says /api/attendance/v2/public/participants returns attendance_percentage,
+  // we should check if we can use that directly and avoid this heavy calculation.
+  // But the participant list might be filtered by program on the backend? 
+  // The service method getParticipantsByProgram takes a program arg.
+  // So we should re-fetch participants when program filter changes.
+
+  const loadParticipantsByProgram = async (program: string) => {
+    setLoading(true);
+    try {
+      const res = await attendanceService.getParticipantsByProgram(program === 'Todos los programas' ? undefined : program);
+      const data = res.data.data || [];
+      // Backend now sends attendance_percentage directly in the participant object
+      setParticipants(data);
+
+      // Update stats state for the progress bar
+      // We map the backend's attendance_percentage to our local state format
+      const newStats: Record<string, { present: number; total: number; percentage: number }> = {};
+      data.forEach((p: any) => {
+        newStats[p.external_id || p.id] = {
+          present: 0, // We might not get exact counts, but we have percentage
+          total: 0,
+          percentage: p.attendance_percentage || 0
+        };
+      });
+      setAttendanceStats(newStats);
+
+    } catch (error) {
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -89,22 +137,24 @@ export default function Participantes() {
 
     if (filterType === 'ESTUDIANTE') {
       // Incluir EXTERNO y PASANTE también como participante
-      filtered = filtered.filter(p => 
-        ['PARTICIPANTE', 'ESTUDIANTE', 'INICIACION', 'STUDENT', 'EXTERNO', 'PASANTE'].includes(p.type?.toUpperCase())
+      filtered = filtered.filter(p =>
+        ['PARTICIPANTE', 'ESTUDIANTE', 'INICIACION', 'STUDENT', 'EXTERNO', 'PASANTE'].includes((p as any).type?.toUpperCase())
       );
     } else if (filterType === 'PROFESOR') {
-      filtered = filtered.filter(p => 
-        p.type?.toUpperCase() === 'PROFESOR'
+      filtered = filtered.filter(p =>
+        (p as any).type?.toUpperCase() === 'PROFESOR'
       );
     } else if (filterType === 'EXTERNO') {
-      filtered = filtered.filter(p => 
-        p.type?.toUpperCase() === 'EXTERNO'
+      filtered = filtered.filter(p =>
+        (p as any).type?.toUpperCase() === 'EXTERNO'
       );
     } else if (filterType === 'PASANTE') {
       // Usar datos del endpoint específico de pasantes
-      filtered = pasantesData.length > 0 ? [...pasantesData] : participants.filter(p => 
-        p.type?.toUpperCase() === 'PASANTE'
+      filtered = pasantesData.length > 0 ? [...pasantesData] : participants.filter(p =>
+        (p as any).type?.toUpperCase() === 'PASANTE'
       );
+    } else if (filterType === 'ADMIN') {
+      filtered = filtered.filter(p => ['ADMIN', 'STAFF'].includes((p as any).type?.toUpperCase()));
     }
 
     if (searchTerm) {
@@ -133,18 +183,18 @@ export default function Participantes() {
   };
 
   // Contar estudiantes (incluye EXTERNO y PASANTE como participante)
-  const students = participants.filter(p => 
-    ['PARTICIPANTE', 'ESTUDIANTE', 'INICIACION', 'STUDENT', 'EXTERNO', 'PASANTE'].includes(p.type?.toUpperCase())
+  const students = participants.filter(p =>
+    ['PARTICIPANTE', 'ESTUDIANTE', 'INICIACION', 'STUDENT', 'EXTERNO', 'PASANTE'].includes((p as any).type?.toUpperCase())
   ).length + (pasantesData.length > 0 ? pasantesData.length : 0);
-  const externos = participants.filter(p => 
-    p.type?.toUpperCase() === 'EXTERNO'
+  const externos = participants.filter(p =>
+    (p as any).type?.toUpperCase() === 'EXTERNO'
   ).length;
   // Usar el conteo del endpoint de pasantes si está disponible
-  const pasantes = pasantesData.length > 0 ? pasantesData.length : participants.filter(p => 
-    p.type?.toUpperCase() === 'PASANTE'
+  const pasantes = pasantesData.length > 0 ? pasantesData.length : participants.filter(p =>
+    (p as any).type?.toUpperCase() === 'PASANTE'
   ).length;
-  const professors = participants.filter(p => 
-    p.type?.toUpperCase() === 'PROFESOR'
+  const professors = participants.filter(p =>
+    (p as any).type?.toUpperCase() === 'PROFESOR'
   ).length;
   const active = participants.filter(p => p.status?.toUpperCase() === 'ACTIVO').length + pasantesData.filter(p => p.status?.toUpperCase() === 'ACTIVO').length;
 
@@ -191,16 +241,25 @@ export default function Participantes() {
               <button
                 key={btn.value}
                 onClick={() => setFilterType(btn.value)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filterType === btn.value
-                    ? 'bg-blue-800 text-white'
-                    : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
-                }`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === btn.value
+                  ? 'bg-blue-800 text-white'
+                  : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                  }`}
               >
                 {btn.label}
               </button>
             ))}
           </div>
+          {/* Program Filter for Attendance Stats */}
+          <select
+            value={programFilter}
+            onChange={(e) => setProgramFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {PROGRAM_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -214,6 +273,7 @@ export default function Participantes() {
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cédula</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</th>
+                {programFilter && <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Asistencia</th>}
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
               </tr>
             </thead>
@@ -242,16 +302,38 @@ export default function Participantes() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{p.dni || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{p.email || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                        isTeacher(p.type) ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        {isTeacher(p.type) ? 'Profesor' : 'Estudiante'}
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${isTeacher((p as any).type) ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                        }`}>
+                        {isTeacher((p as any).type) ? 'Profesor' : 'Estudiante'}
                       </span>
                     </td>
+                    {programFilter && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {attendanceStats[p.id] ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${(attendanceStats[p.id].present / attendanceStats[p.id].total) >= 0.8 ? 'bg-green-500' :
+                                  (attendanceStats[p.id].present / attendanceStats[p.id].total) >= 0.5 ? 'bg-yellow-500' : 'bg-red-500'
+                                  }`}
+                                style={{ width: `${(attendanceStats[p.id].present / attendanceStats[p.id].total) * 100}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              {Math.round((attendanceStats[p.id].present / attendanceStats[p.id].total) * 100)}%
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              ({attendanceStats[p.id].present}/{attendanceStats[p.id].total})
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">N/A</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                        p.status === 'ACTIVO' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                      }`}>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${p.status === 'ACTIVO' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                        }`}>
                         {p.status || 'ACTIVO'}
                       </span>
                     </td>

@@ -77,32 +77,6 @@ export default function SigninWithPassword() {
         value={data.password}
         icon={<PasswordIcon />}
       />
-
-      <div className="mb-6 flex items-center justify-between gap-2 py-2 font-medium">
-        <div className="text-sm text-slate-400">
-          <Checkbox
-            label="Recordarme"
-            name="remember"
-            withIcon="check"
-            minimal
-            radius="md"
-            onChange={(e) =>
-              setData({
-                ...data,
-                remember: e.target.checked,
-              })
-            }
-          />
-        </div>
-
-        <Link
-          href="/auth/forgot-password"
-          className="text-sm text-slate-400 transition-colors hover:text-[#5e5ce6]"
-        >
-          ¿Olvidaste tu contraseña?
-        </Link>
-      </div>
-
       <div className="mb-4.5">
         <button
           type="submit"
@@ -114,16 +88,6 @@ export default function SigninWithPassword() {
             <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-t-transparent" />
           )}
         </button>
-      </div>
-
-      <div className="mt-6 text-center text-sm text-slate-400">
-        ¿No tienes cuenta?{" "}
-        <Link
-          href="/auth/sign-up"
-          className="font-semibold text-[#5e5ce6] hover:underline"
-        >
-          Regístrate
-        </Link>
       </div>
     </form>
   );

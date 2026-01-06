@@ -36,6 +36,7 @@ export default function Programar() {
 
   const [formData, setFormData] = useState({
     name: '',
+    program: '', // Program field (INICIACION or FUNCIONAL)
     day_of_week: '',
     start_time: '08:00',
     end_time: '09:00',
@@ -50,6 +51,12 @@ export default function Programar() {
     specific_date: ''
   });
 
+  // Fixed program options
+  const PROGRAM_OPTIONS = [
+    { value: 'INICIACION', label: 'Iniciación' },
+    { value: 'FUNCIONAL', label: 'Funcional' },
+  ];
+
   useEffect(() => {
     loadData();
   }, []);
@@ -57,9 +64,9 @@ export default function Programar() {
   // Mapeo para normalizar días de la semana a inglés minúscula (formato del backend)
   const normalizeDayOfWeek = (day: string): string => {
     if (!day) return '';
-    
-    const dayLower = day.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    
+
+    const dayLower = day.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Normalizar y quitar acentos para comparación
+
     const dayMap: Record<string, string> = {
       'monday': 'monday', 'lunes': 'monday',
       'tuesday': 'tuesday', 'martes': 'tuesday',
@@ -74,71 +81,35 @@ export default function Programar() {
 
   const loadData = async () => {
     try {
-      const [schedulesRes, programsRes] = await Promise.all([
-        attendanceService.getSchedules(),
-        attendanceService.getPrograms()
-      ]);
-      
-      // Procesar programas
-      setPrograms(programsRes.data.data || []);
-      
-      // Procesar schedules
-      const rawSchedules = schedulesRes.data.data || [];
-      
-      // Debug: Ver qué datos llegan del backend
-      console.log('📅 Raw schedules from backend:', rawSchedules);
-      
-      // Fecha de hoy para filtrar
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayStr = today.toISOString().split('T')[0];
-      
-      // Normalizar los datos del backend y filtrar por fechas activas
-      const normalizedSchedules = rawSchedules
-        .map((s: any) => {
-          const dayFromBackend = s.dayOfWeek || s.day_of_week;
-          const normalizedDay = normalizeDayOfWeek(dayFromBackend);
-          
-          // Si tiene specific_date pero no day_of_week, calcular el día de la semana
-          let finalDay = normalizedDay;
-          const specificDate = s.specific_date || s.specificDate;
-          
-          if (!finalDay && specificDate) {
-            const [year, month, day] = specificDate.split('-').map(Number);
-            const date = new Date(year, month - 1, day, 12, 0, 0);
-            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-            finalDay = dayNames[date.getDay()];
-          }
-          
-          return {
-            ...s,
-            id: s.external_id || s.id,
-            day_of_week: finalDay,
-            start_time: s.startTime || s.start_time,
-            end_time: s.endTime || s.end_time,
-            specific_date: specificDate,
-            start_date: s.start_date || s.startDate,
-            end_date: s.end_date || s.endDate,
-          };
-        })
-        .filter((s: any) => {
-          // Filtrar sesiones que estén activas (dentro del rango de fechas)
-          const startDate = s.start_date;
-          const endDate = s.end_date;
-          
-          // Si tiene end_date y ya pasó, no mostrar
-          if (endDate && endDate < todayStr) {
-            console.log(`🚫 Schedule "${s.name}" filtered out: end_date (${endDate}) < today (${todayStr})`);
-            return false;
-          }
-          
-          return true;
-        });
-      
-      console.log('✅ Filtered schedules:', normalizedSchedules);
+      const res = await attendanceService.getSchedules();
+      const rawSchedules = res.data.data || [];
+
+      const normalizedSchedules = rawSchedules.map((s: any) => {
+        const dayFromBackend = s.dayOfWeek || s.day_of_week;
+        const normalizedDay = normalizeDayOfWeek(dayFromBackend);
+
+        let finalDay = normalizedDay;
+        const specificDate = s.specific_date || s.specificDate;
+
+        if (!finalDay && specificDate) {
+          const [year, month, day] = specificDate.split('-').map(Number);
+          const date = new Date(year, month - 1, day, 12, 0, 0);
+          const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+          finalDay = dayNames[date.getDay()];
+        }
+
+        return {
+          ...s,
+          id: s.external_id || s.id,
+          day_of_week: finalDay,
+          start_time: s.startTime || s.start_time,
+          end_time: s.endTime || s.end_time,
+          specific_date: specificDate,
+        };
+      });
+
       setSchedules(normalizedSchedules);
     } catch (error) {
-      console.error('Error loading schedules:', error);
     } finally {
       setLoading(false);
     }
@@ -160,17 +131,23 @@ export default function Programar() {
       // Construir datos según el tipo de sesión
       const dataToSend: any = {
         name: formData.name,
+        program: formData.program, // Include program in payload
         start_time: formData.start_time,
         end_time: formData.end_time,
         location: formData.location || undefined,
-        capacity: formData.capacity,
+        max_slots: Number(formData.capacity), // Map capacity to max_slots
         description: formData.description || undefined,
         program_id: formData.program_id || undefined,
       };
 
       if (sessionType === 'recurring') {
         // Sesión recurrente (semanal)
-        dataToSend.day_of_week = formData.day_of_week;
+        const dayMap: Record<string, string> = {
+          'Lunes': 'monday', 'Martes': 'tuesday', 'Miércoles': 'wednesday',
+          'Jueves': 'thursday', 'Viernes': 'friday', 'Sábado': 'saturday', 'Domingo': 'sunday'
+        };
+        dataToSend.day_of_week = dayMap[formData.day_of_week] || formData.day_of_week;
+
         if (formData.start_date) dataToSend.start_date = formData.start_date;
         if (formData.end_date) dataToSend.end_date = formData.end_date;
       } else {
@@ -182,7 +159,6 @@ export default function Programar() {
       alert('Sesión creada correctamente');
       router.push('/pages/attendance');
     } catch (error) {
-      console.error('Error creating schedule:', error);
       alert('Error al crear la sesión');
     } finally {
       setSaving(false);
@@ -231,25 +207,21 @@ export default function Programar() {
               />
             </div>
 
-            {/* Selector de Programa */}
+            {/* Program Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Programa</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Programa *</label>
               <select
-                name="program_id"
-                value={formData.program_id}
+                name="program"
+                value={formData.program}
                 onChange={handleChange}
+                required
                 className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
               >
-                <option value="">Sin programa (general)</option>
-                {programs.map(program => (
-                  <option key={program.external_id} value={program.external_id}>
-                    {program.name}
-                  </option>
+                <option value="">Seleccionar programa...</option>
+                {PROGRAM_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Opcional: asocia esta sesión a un programa específico
-              </p>
             </div>
 
             {/* Tipo de sesión */}
@@ -438,6 +410,7 @@ export default function Programar() {
                     {schedulesByDay[day.value].map(s => (
                       <div key={String(s.id)} className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-500">
                         <p className="font-medium text-gray-900 dark:text-white text-sm">{s.name}</p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">{s.program}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {s.start_time} - {s.end_time}
                           {s.location && ` • ${s.location}`}

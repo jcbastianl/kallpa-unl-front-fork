@@ -9,6 +9,8 @@ export type ParticipantType =
   | "PARTICIPANTE"
   | "INICIACION";
 
+export type ProgramType = "INICIACION" | "FUNCIONAL";
+
 export interface Participant {
   id: string;
   external_id?: string;
@@ -22,6 +24,7 @@ export interface Participant {
   role?: string;
   status?: string;
   age?: number;
+  program?: ProgramType;
 }
 
 export interface CreateParticipantRequest {
@@ -33,6 +36,7 @@ export interface CreateParticipantRequest {
   address?: string;
   age?: number;
   email?: string;
+  program: ProgramType;
 }
 
 export interface InitiationRequest {

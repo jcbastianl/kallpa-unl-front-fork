@@ -8,67 +8,63 @@ export const NAV_DATA: NavSection[] = [
       {
         title: "Dashboard",
         icon: Icons.HomeIcon,
-        roles: ["PASANTE", "ADMINISTRADOR"],
+        roles: ["PASANTE", "ADMINISTRADOR", "DOCENTE"],
+        url: "/dashboard",
         items: [
-          {
-            title: "Inicio",
-            url: "/dashboard",
-          },
+          // {
+          //   title: "Inicio",
+          //   url: "/dashboard",
+          // },
         ],
-      },
-      {
-        title: "Calendario",
-        url: "/calendar",
-        icon: Icons.Calendar,
-        items: [],
       },
       {
         title: "Participantes",
         icon: Icons.User,
+        roles: ["PASANTE", "ADMINISTRADOR", "DOCENTE"],
         items: [
           {
             title: "Lista Participantes",
             url: "/pages/participant",
+            roles: ["PASANTE", "ADMINISTRADOR", "DOCENTE"]
           },
           {
             title: "Registrar Nuevo",
             url: "/pages/participant/register",
+            roles: ["PASANTE", "ADMINISTRADOR", "DOCENTE"]
           },
         ],
       },
       {
         title: "Asistencia",
         icon: Icons.Calendar,
+        roles: ["PASANTE", "ADMINISTRADOR", "DOCENTE"],
         items: [
           {
-            title: "Dashboard",
+            title: "Sesiones",
             url: "/pages/attendance",
+            roles: ["PASANTE", "ADMINISTRADOR", "DOCENTE"]
           },
           {
-            title: "Programas",
-            url: "/pages/attendance/programas",
-          },
-          {
-            title: "Programar",
+            title: "Programar Sesión",
             url: "/pages/attendance/programar",
-          },
-          {
-            title: "Participantes",
-            url: "/pages/attendance/participantes",
+            roles: ["ADMINISTRADOR", "DOCENTE"]
           },
           {
             title: "Historial",
             url: "/pages/attendance/historial",
+            roles: ["PASANTE", "ADMINISTRADOR", "DOCENTE"]
           },
         ],
       },
       {
         title: "Medidas Antro",
         icon: Icons.TapeMeasureIcon,
+        roles: ["PASANTE", "ADMINISTRADOR", "DOCENTE"],
         items: [
           {
             title: "Registrar",
             url: "/anthropometric/form",
+            roles: ["PASANTE", "ADMINISTRADOR", "DOCENTE"]
           },
         ],
       },
@@ -80,11 +76,12 @@ export const NAV_DATA: NavSection[] = [
           {
             title: "Registrar Test",
             url: "/evolution/form-test",
+            roles: ["ADMINISTRADOR", "DOCENTE"]
           },
           {
             title: "Asignar Test",
             url: "/evolution/assign-test",
-            roles: ["DOCENTE"],
+            roles: ["PASANTE", "ADMINISTRADOR", "DOCENTE"]
           },
         ],
       },
@@ -92,6 +89,7 @@ export const NAV_DATA: NavSection[] = [
         title: "Historial",
         url: "/history/measurements",
         icon: Icons.HistoryIcon,
+        roles: ["PASANTE", "ADMINISTRADOR", "DOCENTE"],
         items: [],
       },
     ],
@@ -103,6 +101,7 @@ export const NAV_DATA: NavSection[] = [
         title: "Usuarios",
         url: "/pages/user",
         icon: Icons.User,
+        roles: ["ADMINISTRADOR"],
         items: [],
       },
     ],
