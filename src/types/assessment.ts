@@ -28,3 +28,7 @@ export interface AssessmentTableData {
   waistPerimeter: number;
   wingspan: number;
 }
+export interface BmiDistributionItem {
+  label: string;
+  value: number;
+}

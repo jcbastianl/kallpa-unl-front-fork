@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import { OverviewCardsGroup } from "./_components/overview-cards";
 import { RecentActivity } from "./_components/activity/recent-activity";
-import { MeasurementStats } from "./_components/activity/measurement-stats";
 import { PendingPhysicalTests } from "./_components/activity/pending-test";
+import MeasurementStats from "./_components/activity/measurement-stats";
 
 type PropsType = {
   searchParams: Promise<{
@@ -24,8 +24,8 @@ export default async function Home({ searchParams }: PropsType) {
           </div>
 
           <div className="flex flex-col gap-6 xl:col-span-2">
-            <MeasurementStats dateFrom="2026-01-04" dateTo="2026-03-04" />
-            <PendingPhysicalTests />
+            <MeasurementStats/>
+            {/* <PendingPhysicalTests /> */}
           </div>
         </Suspense>
       </div>

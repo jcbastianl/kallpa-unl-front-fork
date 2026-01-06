@@ -377,12 +377,7 @@ export default function DashboardAsistencia() {
           label="Participantes Activos"
           value={activeParticipants}
         />
-        <StatCard
-          icon="check_circle"
-          iconBg="bg-emerald-100 text-emerald-600"
-          label="Asistencia Promedio"
-          value="85%"
-        />
+
         <StatCard
           icon="calendar_month"
           iconBg="bg-purple-100 text-purple-600"
@@ -502,6 +497,14 @@ export default function DashboardAsistencia() {
                         </button>
                       )}
 
+                      <button
+                        onClick={() => handleDelete(scheduleId, schedule.name)}
+                        className="px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                        title="Eliminar sesión"
+                      >
+                        <span className="material-symbols-outlined">delete</span>
+                      </button>
+
                     </div>
                   </div>
                 );
@@ -566,6 +569,13 @@ export default function DashboardAsistencia() {
                       >
                         <span className="material-symbols-outlined text-base">edit</span>
                         Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(sessionId, session.name)}
+                        className="px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                        title="Eliminar sesión"
+                      >
+                        <span className="material-symbols-outlined">delete</span>
                       </button>
                     </div>
                   </div>

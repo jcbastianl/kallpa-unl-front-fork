@@ -233,8 +233,23 @@ export const participantService = {
 
     if (!response.ok) {
       throw result;
-    }
+    }    
 
     return result;
   },
+
+  async getActiveParticipantsCounts(): Promise<{ adult: number; minor: number }> {
+    const response = await fetch(`${API_URL}/participants/active/count`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+  
+    const result = await response.json();
+  
+    if (!response.ok) {
+      throw new Error(result.msg || "Error al obtener totales de participantes");
+    }
+  
+    return result.data;
+  }  
 };

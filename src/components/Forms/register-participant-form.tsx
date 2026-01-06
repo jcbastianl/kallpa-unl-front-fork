@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import InputGroup from "@/components/FormElements/InputGroup";
 import { participantService } from "@/services/participant.service";
 import { Select } from "../FormElements/select";
@@ -8,8 +8,7 @@ import { Alert } from "@/components/ui-elements/alert";
 import ErrorMessage from "../FormElements/errormessage";
 import { ShowcaseSection } from "../Layouts/showcase-section";
 
-// Estado inicial del formulario y configuración de alertas
-const RegisterParticipantForm = () => {
+export const RegisterParticipantForm = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showAlert, setShowAlert] = useState(false);
@@ -18,7 +17,6 @@ const RegisterParticipantForm = () => {
   >("success");
   const [alertTitle, setAlertTitle] = useState("");
   const [alertDescription, setAlertDescription] = useState("");
-
   const triggerAlert = (
     variant: "success" | "error" | "warning",
     title: string,
@@ -39,22 +37,17 @@ const RegisterParticipantForm = () => {
     lastName: "",
     dni: "",
     type: "",
-    program: "",
     phone: "",
     address: "",
     age: "",
     email: "",
+    program: "",
+
+    //SOLO PARA MENORES
     responsibleName: "",
     responsibleDni: "",
     responsiblePhone: "",
   });
-
-  // Regla para restringir programas según edad (> 18 solo Funcional)
-  useEffect(() => {
-    if (Number(formData.age) > 18 && formData.program === "INICIACION") {
-      setFormData((prev) => ({ ...prev, program: "FUNCIONAL" }));
-    }
-  }, [formData.age, formData.program]);
 
   const isMinor = Number(formData.age) > 0 && Number(formData.age) < 18;
   const clearFieldError = (field: string) => {
@@ -73,19 +66,11 @@ const RegisterParticipantForm = () => {
     { value: "EXTERNO", label: "Externo" },
     { value: "PARTICIPANTE", label: "Participante General" },
   ];
-
-  // Opciones base
-  const allProgramOptions = [
+  const TypeOptions = [
     { value: "", label: "Seleccione un programa" },
     { value: "INICIACION", label: "Iniciación" },
     { value: "FUNCIONAL", label: "Funcional" },
   ];
-
-  // Filtrar opciones si es mayor a 18 años
-  const programOptions = Number(formData.age) > 18
-    ? allProgramOptions.filter(p => p.value !== "INICIACION")
-    : allProgramOptions;
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -100,53 +85,7 @@ const RegisterParticipantForm = () => {
     setErrors({});
 
     try {
-      if (!formData.firstName)
-        errors.firstName = "Nombre requerido";
-
-      if (!formData.lastName)
-        errors.lastName = "Apellido requerido";
-
-      if (!formData.dni || formData.dni.length < 10)
-        errors.dni = "La cédula debe tener al menos 10 dígitos";
-
-      if (!formData.age)
-        errors.age = "Edad requerida";
-
-      if (!formData.type)
-        errors.type = "Tipo de participante requerido";
-
-      if (!formData.program)
-        errors.program = "Programa requerido (INICIACION o FUNCIONAL)";
-
-      if (formData.email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(formData.email)) {
-          errors.email = "Email no válido";
-        }
-      }
-
-      if (!formData.phone)
-        errors.phone = "Celular requerido";
-      else if (formData.phone.length < 10)
-        errors.phone = "Celular no válido";
-
-      if (!formData.address)
-        errors.address = "Dirección requerida";
-
-      if (isMinor) {
-        if (!formData.responsibleName)
-          errors.responsibleName = "Nombre del responsable requerido";
-        if (!formData.responsibleDni)
-          errors.responsibleDni = "Cédula del responsable requerida";
-        if (!formData.responsiblePhone)
-          errors.responsiblePhone = "Teléfono del responsable requerido";
-      }
-
-      if (Object.keys(errors).length > 0) {
-        setErrors(errors);
-        return;
-      }
-      await participantService.createParticipant({
+      const response = await participantService.createParticipant({
         ...formData,
         age: formData.age ? parseInt(formData.age) : 0,
       });
@@ -161,7 +100,6 @@ const RegisterParticipantForm = () => {
         lastName: "",
         dni: "",
         type: "ESTUDIANTE",
-        program: "",
         phone: "",
         address: "",
         age: "",
@@ -169,6 +107,7 @@ const RegisterParticipantForm = () => {
         responsibleName: "",
         responsibleDni: "",
         responsiblePhone: "",
+        program: "",
       });
     } catch (err: any) {
       if (err?.data && typeof err.data === "object") {
@@ -263,27 +202,13 @@ const RegisterParticipantForm = () => {
               name="type"
               label="Tipo"
               items={participantTypeOptions}
-              placeholder="Estudiante"
+              placeholder=""
               value={formData.type}
               onChange={(e) => handleChange(e)}
               className="w-full"
             />
             <ErrorMessage message={errors.type} />
           </div>
-        </div>
-
-
-        <div className="mb-4.5">
-          <Select
-            name="program"
-            label="Programa *"
-            items={programOptions}
-            placeholder="Seleccione programa"
-            value={formData.program}
-            onChange={(e) => handleChange(e)}
-            className="w-full"
-          />
-          <ErrorMessage message={errors.program} />
         </div>
 
         <div className="mb-4.5 flex flex-col gap-6 xl:flex-row">
@@ -312,6 +237,18 @@ const RegisterParticipantForm = () => {
           </div>
         </div>
 
+        <div className="xl:col-span-5">
+          <Select
+            name="program"
+            label="Seleccione un programa"
+            items={TypeOptions}
+            placeholder=""
+            value={formData.program}
+            onChange={(e) => handleChange(e)}
+            className="w-full"
+          />
+          <ErrorMessage message={errors.program} />
+        </div>
         <div className="mb-4.5">
           <InputGroup
             label="Dirección"
@@ -322,7 +259,6 @@ const RegisterParticipantForm = () => {
             value={formData.address}
             handleChange={handleChange}
           />
-          <ErrorMessage message={errors.address} />
         </div>
 
         <div className="relative mb-8 mt-10 flex items-center justify-center">
@@ -404,5 +340,3 @@ const RegisterParticipantForm = () => {
     </ShowcaseSection>
   );
 };
-
-export { RegisterParticipantForm };

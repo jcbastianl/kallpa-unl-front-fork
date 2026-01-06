@@ -2,34 +2,40 @@ import { LoginRequest, LoginResponse } from "@/types/auth";
 
 const API_URL = "http://localhost:5000/api";
 
-export const authService = {
-  async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(credentials),
-    });
+  export const authService = {
+    async login(credentials: LoginRequest): Promise<LoginResponse> {
+      let response;
 
-    const data = await response.json();
+      try {
+        response = await fetch(`${API_URL}/auth/login`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(credentials),
+        });
+      } catch {
+        throw new Error("Error en el sistema, vuelva a intentarlo.");
+      }
 
-    if (!response.ok || data.status === "error") {
-      throw new Error(data.message || data.msg || "Error al iniciar sesión");
-    }
+      const data = await response.json();
 
-    const token = data.token || data.data?.token;
-    const user = data.user || data.data?.user || data.data;
+      if (!response.ok || data.status === "error") {
+        throw new Error(data.message || data.msg || "Error al iniciar sesión");
+      }
 
-    if (token) {
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      document.cookie = `token=${token}; path=/; max-age=86400;`;
-    }
+      const token = data.token || data.data?.token;
+      const user = data.user || data.data?.user || data.data;
 
-    return data;
-  },
+      if (token) {
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+        document.cookie = `token=${token}; path=/; max-age=86400;`;
+      }
 
+      return data;
+    },
+  
   logout() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
