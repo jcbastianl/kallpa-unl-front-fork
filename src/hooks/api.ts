@@ -1,7 +1,7 @@
 import { ApiResponse } from "@/types/api";
 import { get, post, postWithAuth } from "./apiUtils";
 import type { Participant, InitiationRequest } from "@/types/participant";
-import { AssessmentData, AssessmentResponseData } from "@/types/assessment";
+import { AssessmentData, AssessmentResponseData, BmiDistributionItem } from "@/types/assessment";
 import type { LoginRequest, LoginResponse } from "@/types/auth";
 import {
   RegisterTestFormData,
@@ -99,28 +99,13 @@ export const getAssessmentsByParticipant = async (
   return response.data;
 };
 
-export const getAverageBMI = async (): Promise<{ average_bmi: number | null }> => {
-  const response = await get<ApiResponse<{ average_bmi: number | null }>>(
-    "/average-bmi"
-  );
+export const getBmiDistribution = async (): Promise<BmiDistributionItem[]> => {
+  const response = await get<
+    ApiResponse<BmiDistributionItem[]>
+  >("/bmi-distribution");
+
   return response.data;
 };
-
-export const getAnthropometricHistory = async (
-  dateFrom?: string,
-  dateTo?: string,
-) => {
-  const params = new URLSearchParams();
-  if (dateFrom) params.append("date_from", dateFrom);
-  if (dateTo) params.append("date_to", dateTo);
-
-  const response = await get<ApiResponse<AssessmentResponseData[]>>(
-    `/assessments/history?${params.toString()}`
-  );
-
-  return response.data; // esto contendrá el arreglo de evaluaciones
-};
-
 
 // ==================== TEST FORMULARIOS ====================
 export const getTests = async (): Promise<TestListItem[]> => {

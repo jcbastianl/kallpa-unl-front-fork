@@ -1,10 +1,9 @@
 "use client";
 import { compactFormat } from "@/lib/format-number";
 import { OverviewCard } from "./card";
-import { FiActivity, FiBox, FiUsers } from "react-icons/fi";
+import { FiBox, FiCalendar, FiClock, FiSmile, FiUserCheck, FiUsers } from "react-icons/fi";
 import { participantService } from "@/services/participant.service";
 import { useEffect, useState } from "react";
-import { getAverageBMI } from "@/hooks/api";
 
 export function OverviewCardsGroup() {
   const [overviewData, setOverviewData] = useState({
@@ -13,27 +12,18 @@ export function OverviewCardsGroup() {
     products: { value: 0, growthRate: 0 },
     users: { value: 0, growthRate: 0 },
   });
-  const [activeParticipants, setActiveParticipants] = useState(0);
-  const [totalParticipants, setTotalParticipants] = useState(0);
-  const [averageBMI, setAverageBMI] = useState<number | null>(null);
+  const [adultCount, setAdultCount] = useState(0);
+  const [minorCount, setMinorCount] = useState(0);
 
   useEffect(() => {
-    // Traer participantes y calcular activos
-    participantService.getAll().then((participants) => {
-      const active = participants.filter((p) => p.status === "ACTIVO").length;
-      setActiveParticipants(active);
-      setTotalParticipants(participants.length);
-    });
-
-    // Traer promedio de IMC
-    getAverageBMI().then((data) => {
-      setAverageBMI(data.average_bmi);
-    });
+    participantService
+      .getActiveParticipantsCounts()
+      .then((data) => {
+        setAdultCount(data.adult);
+        setMinorCount(data.minor);
+      })
+      .catch(console.error);
   }, []);
-
-  const activeRate = totalParticipants
-    ? (activeParticipants / totalParticipants) * 100
-    : 0;
 
   const { products, users } = overviewData;
 
@@ -41,25 +31,27 @@ export function OverviewCardsGroup() {
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:gap-7.5">
         <OverviewCard
-          label="Participantes"
-          data={{ value: activeParticipants, growthRate: activeRate }}
-          Icon={FiUsers}
+          label="Participantes (>18)"
+          data={{ value: adultCount, growthRate: 0 }}
+          Icon={FiUserCheck}
           variant="green"
         />
         <OverviewCard
-          label="Promedio de IMC"
-          data={{
-            value: averageBMI !== null ? averageBMI.toFixed(2) : "-",
-            growthRate: 0,
-          }}
-          Icon={FiActivity}
+          label="Participantes (<18)"
+          data={{ value: minorCount, growthRate: 0 }}
+          Icon={FiSmile}
           variant="orange"
         />
-
+        <OverviewCard
+          label="Asistencia"
+          data={{ ...products, value: compactFormat(products.value) }}
+          Icon={FiCalendar}
+          variant="purple"
+        />
         <OverviewCard
           label="Pruebas Pendientes"
           data={{ ...users, value: compactFormat(users.value) }}
-          Icon={FiUsers}
+          Icon={FiClock}
           variant="blue"
         />
       </div>

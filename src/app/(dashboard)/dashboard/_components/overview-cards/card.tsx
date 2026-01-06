@@ -1,5 +1,10 @@
 import { cn } from "@/lib/utils";
 import type { IconType } from "react-icons";
+import {
+  FiArrowUpRight,
+  FiArrowDownRight,
+  FiMoreHorizontal,
+} from "react-icons/fi";
 
 type PropsType = {
   label: string;
@@ -20,47 +25,52 @@ export function OverviewCard({
   const isDecreasing = data.growthRate < 0;
 
   const variantStyles = {
-    green:
-      "bg-green-500/10 text-green-600 dark:bg-[#3FD97F]/10 dark:text-[#3FD97F]",
-    orange:
-      "bg-orange-500/10 text-orange-600 dark:bg-[#FF9C55]/10 dark:text-[#FF9C55]",
-    purple:
-      "bg-purple-500/10 text-purple-600 dark:bg-[#8155FF]/10 dark:text-[#8155FF]",
-    blue: "bg-sky-500/10 text-sky-600 dark:bg-[#18BFFF]/10 dark:text-[#18BFFF]",
+    green: "bg-blue-600/20 text-blue-500",
+    orange: "bg-orange-500/10 text-orange-600",
+    purple: "bg-purple-500/10 text-purple-600",
+    blue: "bg-sky-500/10 text-sky-600",
   };
 
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 dark:bg-[#1a2233] dark:shadow-lg dark:ring-0">
-      <div
-        className={cn(
-          "mb-8 flex h-14 w-14 items-center justify-center rounded-full transition-transform hover:scale-110",
-          variantStyles[variant],
-        )}
-      >
-        <Icon size={28} />
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <h3 className="text-3xl font-bold text-slate-900 dark:text-white">
-          {data.value}
-        </h3>
-
-        <div className="mt-1 flex items-center justify-between">
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-            {label}
-          </p>
-
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:border-slate-300 dark:border-[#2d3643] dark:bg-[#1a2233] dark:hover:border-slate-700">
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-4">
           <div
             className={cn(
-              "flex items-center gap-1 text-sm font-semibold",
-              isDecreasing
-                ? "text-red-500 dark:text-red-400"
-                : "text-green-600 dark:text-green-400",
+              "flex h-10 w-10 items-center justify-center rounded-lg",
+              variantStyles[variant],
             )}
           >
-            {/* Aquí irían tus flechas de react-icons también */}
+            <Icon size={20} />
           </div>
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            {label}
+          </span>
         </div>
+        <button className="text-slate-400 transition-colors hover:text-white">
+          <FiMoreHorizontal size={20} />
+        </button>
+      </div>
+      <div className="mb-4">
+        <h3 className="text-4xl font-bold text-slate-900 dark:text-white">
+          {data.value}
+        </h3>
+      </div>
+      <div className="flex items-center gap-3">
+        <div
+          className={cn(
+            "flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold",
+            isDecreasing
+              ? "bg-red-500/10 text-red-500"
+              : "bg-green-500/10 text-green-500",
+          )}
+        >
+          {isDecreasing ? <FiArrowDownRight /> : <FiArrowUpRight />}
+          {Math.abs(data.growthRate)}%
+        </div>
+        <span className="text-xs text-slate-500 dark:text-slate-500">
+          vs. mes anterior
+        </span>
       </div>
     </div>
   );
