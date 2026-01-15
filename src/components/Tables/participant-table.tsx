@@ -1,16 +1,48 @@
 "use client";
 
 import { TableBase } from "@/components/Tables/tablebase";
-import { participantColumns } from "@/components/Tables/columns/participant-columns";
+import { getParticipantColumns } from "@/components/Tables/columns/participant-columns";
 import { Participant } from "@/types/participant";
-import { useMemo, useState } from "react";
+import { participantService } from "@/services/participant.service";
+import { useMemo, useState, useCallback } from "react";
 import { FiChevronDown, FiFilter, FiSearch } from "react-icons/fi";
 
-export function ParticipantsTable({ data }: { data: Participant[] }) {
+interface ParticipantsTableProps {
+  data: Participant[];
+  onStatusChange?: () => Promise<void> | void;
+}
+
+export function ParticipantsTable({ data, onStatusChange }: ParticipantsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Todos");
+  const [statusFilter, setStatusFilter] = useState("TODOS");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const statusOptions = ["TODOS", "ACTIVO", "INACTIVO"];
+
+  const handleToggleStatus = useCallback(async (participant: Participant) => {
+    if (!participant.id) return;
+
+    const newStatus = participant.status === "ACTIVO" ? "INACTIVO" : "ACTIVO";
+
+    try {
+      setLoadingId(participant.id);
+      await participantService.changeStatus(participant.id, newStatus);
+      if (onStatusChange) {
+        await onStatusChange();
+      }
+    } catch (error) {
+      console.error("Error al cambiar estado:", error);
+      alert("Error al cambiar el estado del participante");
+    } finally {
+      setLoadingId(null);
+    }
+  }, [onStatusChange]);
+
+  const columns = useMemo(
+    () => getParticipantColumns({ onToggleStatus: handleToggleStatus, loadingId }),
+    [handleToggleStatus, loadingId]
+  );
+
   const filteredData = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
 
@@ -22,12 +54,14 @@ export function ParticipantsTable({ data }: { data: Participant[] }) {
         !term || fullName.includes(term) || dni.includes(term);
 
       const matchesStatus =
-        statusFilter === "Todos" || item.status === statusFilter;
+        statusFilter === "TODOS" || item.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
   }, [searchTerm, statusFilter, data]);
+
   const isEmpty = filteredData.length === 0;
+
   return (
     <div className="flex flex-col gap-5">
       <div className="dark:border-strokedark dark:bg-meta-4 flex items-center gap-4 rounded-xl border border-stroke bg-gray-2 bg-white p-2 dark:border-dark-3 dark:bg-gray-dark">
@@ -61,11 +95,10 @@ export function ParticipantsTable({ data }: { data: Participant[] }) {
                     setStatusFilter(option);
                     setIsFilterOpen(false);
                   }}
-                  className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                    statusFilter === option
-                      ? "bg-primary text-white"
-                      : "text-gray-400 hover:bg-white/5 hover:text-dark dark:hover:text-white"
-                  }`}
+                  className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${statusFilter === option
+                    ? "bg-primary text-white"
+                    : "text-gray-400 hover:bg-white/5 hover:text-dark dark:hover:text-white"
+                    }`}
                 >
                   {option}
                 </button>
@@ -85,7 +118,7 @@ export function ParticipantsTable({ data }: { data: Participant[] }) {
         </div>
       ) : (
         <TableBase
-          columns={participantColumns}
+          columns={columns}
           data={filteredData}
           rowKey={(p) => String(p.id)}
         />
@@ -93,3 +126,4 @@ export function ParticipantsTable({ data }: { data: Participant[] }) {
     </div>
   );
 }
+

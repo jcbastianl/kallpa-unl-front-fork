@@ -72,8 +72,7 @@ export const participantService = {
         (p: any) =>
           p.type !== "ADMINISTRATIVO" &&
           p.type !== "DOCENTEADMIN" &&
-          p.type !== "PASANTE" &&
-          p.status === "ACTIVO"
+          p.type !== "PASANTE"
       );
   },
 
@@ -233,7 +232,7 @@ export const participantService = {
 
     if (!response.ok) {
       throw result;
-    }    
+    }
 
     return result;
   },
@@ -243,13 +242,13 @@ export const participantService = {
       method: "GET",
       headers: this.getHeaders(),
     });
-  
+
     const result = await response.json();
-  
+
     if (!response.ok) {
       throw new Error(result.msg || "Error al obtener totales de participantes");
     }
-  
+
     return result.data;
-  }  
+  }
 };

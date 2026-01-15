@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { ParticipantsTable } from "@/components/Tables/participant-table";
@@ -12,23 +12,22 @@ export default function ParticipantPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const data = await participantService.getAll();
-        setParticipants(data);
-      } catch (err) {
-        setError("Ocurrió un problema con el servidor, espere un momento");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+  const fetchData = useCallback(async () => {
+    try {
+      setError(null);
+      const data = await participantService.getAll();
+      setParticipants(data);
+    } catch (err) {
+      setError("Ocurrió un problema con el servidor, espere un momento");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
   if (loading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -49,6 +48,7 @@ export default function ParticipantPage() {
       </div>
     );
   }
+
   return (
     <div className="mx-auto w-full max-w-[1080px]">
       <Breadcrumb pageName="Lista Participantes" />
@@ -77,8 +77,9 @@ export default function ParticipantPage() {
         </Link>
       </div>
       <div className="space-y-10">
-        <ParticipantsTable data={participants} />
+        <ParticipantsTable data={participants} onStatusChange={fetchData} />
       </div>
     </div>
   );
 }
+
