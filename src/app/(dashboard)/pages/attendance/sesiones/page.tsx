@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { attendanceService } from '@/services/attendance.services';
 import type { Schedule } from '@/types/attendance';
+import { Alert } from '@/components/ui-elements/alert';
 
 function Loading() {
   return (
@@ -18,8 +19,29 @@ export default function Sesiones() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | number | null>(null);
   const [editingSession, setEditingSession] = useState<Schedule | null>(null);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertVariant, setAlertVariant] = useState<'success' | 'error' | 'warning'>('success');
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertDescription, setAlertDescription] = useState('');
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState<{id: string | number, name: string} | null>(null);
 
   const daysOrder = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+
+  const triggerAlert = (
+    variant: 'success' | 'error' | 'warning',
+    title: string,
+    description: string
+  ) => {
+    setAlertVariant(variant);
+    setAlertTitle(title);
+    setAlertDescription(description);
+    setShowAlert(true);
+
+    setTimeout(() => {
+      setShowAlert(false);
+    }, 5000);
+  };
 
   useEffect(() => {
     loadSchedules();
@@ -82,16 +104,32 @@ export default function Sesiones() {
   };
 
   const handleDelete = async (sessionId: string | number, sessionName: string) => {
-    if (!confirm(`¿Estás seguro de eliminar la sesión "${sessionName}"?`)) return;
+    setSessionToDelete({ id: sessionId, name: sessionName });
+    setShowConfirmDelete(true);
+  };
 
-    setDeleting(sessionId);
+  const confirmDelete = async () => {
+    if (!sessionToDelete) return;
+
+    setDeleting(sessionToDelete.id);
+    setShowConfirmDelete(false);
     try {
-      await attendanceService.deleteSchedule(sessionId);
-      setSchedules(prev => prev.filter(s => (s.external_id || s.id) !== sessionId));
+      await attendanceService.deleteSchedule(sessionToDelete.id);
+      setSchedules(prev => prev.filter(s => (s.external_id || s.id) !== sessionToDelete.id));
+      triggerAlert(
+        'success',
+        'Sesión eliminada',
+        `La sesión "${sessionToDelete.name}" se ha eliminado correctamente.`
+      );
     } catch (error) {
-      alert('Error al eliminar la sesión');
+      triggerAlert(
+        'error',
+        'Error al eliminar',
+        'No se pudo eliminar la sesión. Intenta nuevamente.'
+      );
     } finally {
       setDeleting(null);
+      setSessionToDelete(null);
     }
   };
 
@@ -107,17 +145,19 @@ export default function Sesiones() {
     const sessionId = editingSession.external_id || editingSession.id;
 
     const dayMap: Record<string, string> = {
-      'LUNES': 'monday', 'MARTES': 'tuesday', 'MIERCOLES': 'wednesday',
-      'JUEVES': 'thursday', 'VIERNES': 'friday', 'SABADO': 'saturday', 'DOMINGO': 'sunday'
+      'LUNES': 'MONDAY', 'MARTES': 'TUESDAY', 'MIERCOLES': 'WEDNESDAY',
+      'JUEVES': 'THURSDAY', 'VIERNES': 'FRIDAY', 'SABADO': 'SATURDAY', 'DOMINGO': 'SUNDAY',
+      'monday': 'MONDAY', 'tuesday': 'TUESDAY', 'wednesday': 'WEDNESDAY',
+      'thursday': 'THURSDAY', 'friday': 'FRIDAY', 'saturday': 'SATURDAY', 'sunday': 'SUNDAY'
     };
     const dayValue = editingSession.day_of_week || '';
 
     const data = {
       name: formData.get('name') as string,
       program: editingSession.program || '', // Include program from state
-      day_of_week: dayMap[dayValue] || dayValue.toLowerCase(), // Map to English
-      start_time: formData.get('start_time') as string,
-      end_time: formData.get('end_time') as string,
+      dayOfWeek: dayMap[dayValue] || dayValue.toUpperCase(), // Map to English UPPERCASE
+      startTime: formData.get('start_time') as string,
+      endTime: formData.get('end_time') as string,
       location: formData.get('location') as string,
     };
 
@@ -125,8 +165,17 @@ export default function Sesiones() {
       await attendanceService.updateSchedule(sessionId, data);
       setEditingSession(null);
       loadSchedules();
+      triggerAlert(
+        'success',
+        'Sesión actualizada',
+        'Los cambios se han guardado correctamente.'
+      );
     } catch (error) {
-      alert('Error al actualizar la sesión');
+      triggerAlert(
+        'error',
+        'Error al actualizar',
+        'No se pudieron guardar los cambios. Intenta nuevamente.'
+      );
     }
   };
 
@@ -152,6 +201,17 @@ export default function Sesiones() {
           </Link>
         </div>
       </div>
+
+      {/* Alert */}
+      {showAlert && (
+        <div className="mb-6">
+          <Alert
+            variant={alertVariant}
+            title={alertTitle}
+            description={alertDescription}
+          />
+        </div>
+      )}
 
       {/* Sessions by Day */}
       <div className="space-y-6">
@@ -278,6 +338,45 @@ export default function Sesiones() {
                 <button type="submit" className="flex-1 px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 font-medium">Guardar</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Eliminación */}
+      {showConfirmDelete && sessionToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-dark rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
+                <span className="material-symbols-outlined text-red-600 dark:text-red-400">warning</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Confirmar eliminación</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Esta acción no se puede deshacer</p>
+              </div>
+            </div>
+            <p className="text-gray-700 dark:text-gray-300 mb-6">
+              ¿Estás seguro de eliminar la sesión <strong>"{sessionToDelete.name}"</strong>?
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmDelete(false);
+                  setSessionToDelete(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+              >
+                Eliminar
+              </button>
+            </div>
           </div>
         </div>
       )}

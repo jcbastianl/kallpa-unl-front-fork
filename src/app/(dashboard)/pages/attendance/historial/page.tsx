@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { attendanceService } from '@/services/attendance.services';
 import type { Schedule, HistoryRecord, SessionDetail } from '@/types/attendance';
+import { Alert } from '@/components/ui-elements/alert';
 
 function StatCard({ icon, iconBg, label, value }: { icon: string; iconBg: string; label: string; value: string | number }) {
   return (
@@ -35,6 +36,12 @@ export default function Historial() {
   const [loading, setLoading] = useState(true);
   const [sessionDetail, setSessionDetail] = useState<SessionDetail | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertVariant, setAlertVariant] = useState<'success' | 'error' | 'warning'>('success');
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertDescription, setAlertDescription] = useState('');
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [attendanceToDelete, setAttendanceToDelete] = useState<{scheduleId: string, date: string, name: string} | null>(null);
 
   const [dateFrom, setDateFrom] = useState(() => {
     const d = new Date();
@@ -46,6 +53,21 @@ export default function Historial() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
   const [filterDay, setFilterDay] = useState('Todos los días');
+
+  const triggerAlert = (
+    variant: 'success' | 'error' | 'warning',
+    title: string,
+    description: string
+  ) => {
+    setAlertVariant(variant);
+    setAlertTitle(title);
+    setAlertDescription(description);
+    setShowAlert(true);
+
+    setTimeout(() => {
+      setShowAlert(false);
+    }, 5000);
+  };
 
   useEffect(() => {
     loadData();
@@ -167,7 +189,11 @@ export default function Historial() {
 
 
       if (records.length === 0) {
-        alert('No se encontraron registros de asistencia para esta sesión');
+        triggerAlert(
+          'warning',
+          'Sin registros',
+          'No se encontraron registros de asistencia para esta sesión.'
+        );
         return;
       }
 
@@ -206,26 +232,48 @@ export default function Historial() {
       setSessionDetail(sessionDetail as SessionDetail);
       setShowModal(true);
     } catch (error) {
-      alert('Error al cargar los detalles de la sesión');
+      triggerAlert(
+        'error',
+        'Error al cargar detalles',
+        'No se pudieron cargar los detalles de la sesión. Intenta nuevamente.'
+      );
     }
   };
 
   const handleDelete = async (scheduleId: string, date: string, scheduleName: string) => {
     if (!scheduleId) {
-      alert('Error: No se encontró el ID del horario.');
+      triggerAlert(
+        'error',
+        'Error',
+        'No se encontró el ID del horario.'
+      );
       return;
     }
 
-    if (!confirm(`¿Estás seguro de eliminar la asistencia de "${scheduleName}" del ${date}?\n\nEsta acción no se puede deshacer.`)) {
-      return;
-    }
+    setAttendanceToDelete({ scheduleId, date, name: scheduleName });
+    setShowConfirmDelete(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!attendanceToDelete) return;
+
+    setShowConfirmDelete(false);
     try {
-      await attendanceService.deleteSessionAttendance(scheduleId, date);
+      await attendanceService.deleteSessionAttendance(attendanceToDelete.scheduleId, attendanceToDelete.date);
       loadHistory();
-      alert('Registro de asistencia eliminado correctamente');
+      triggerAlert(
+        'success',
+        'Registro eliminado',
+        `La asistencia de "${attendanceToDelete.name}" del ${attendanceToDelete.date} se eliminó correctamente.`
+      );
     } catch (error) {
-      alert('Error al eliminar el registro');
+      triggerAlert(
+        'error',
+        'Error al eliminar',
+        'No se pudo eliminar el registro. Intenta nuevamente.'
+      );
+    } finally {
+      setAttendanceToDelete(null);
     }
   };
 
@@ -270,6 +318,17 @@ export default function Historial() {
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">Historial de Asistencia</h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">Consulta los registros de asistencia anteriores.</p>
       </div>
+
+      {/* Alert */}
+      {showAlert && (
+        <div className="mb-6">
+          <Alert
+            variant={alertVariant}
+            title={alertTitle}
+            description={alertDescription}
+          />
+        </div>
+      )}
 
       {/* Stats Cards */}
       {/* Stats Cards */}
@@ -406,6 +465,45 @@ export default function Historial() {
                   <p className="text-gray-500 text-center py-4">No hay registros de participantes.</p>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Eliminación */}
+      {showConfirmDelete && attendanceToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-dark rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
+                <span className="material-symbols-outlined text-red-600 dark:text-red-400">warning</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Confirmar eliminación</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Esta acción no se puede deshacer</p>
+              </div>
+            </div>
+            <p className="text-gray-700 dark:text-gray-300 mb-6">
+              ¿Estás seguro de eliminar la asistencia de <strong>"{attendanceToDelete.name}"</strong> del {attendanceToDelete.date}?
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmDelete(false);
+                  setAttendanceToDelete(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+              >
+                Eliminar
+              </button>
             </div>
           </div>
         </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { attendanceService } from '@/services/attendance.services';
 import type { Program, Participant } from '@/types/attendance';
+import { Alert } from '@/components/ui-elements/alert';
 
 const COLORS = [
   { value: '#3B82F6' },
@@ -30,6 +31,12 @@ export default function ProgramasPage() {
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertVariant, setAlertVariant] = useState<'success' | 'error' | 'warning'>('success');
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertDescription, setAlertDescription] = useState('');
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [programToDelete, setProgramToDelete] = useState<{id: string, name: string} | null>(null);
 
   // Estado para ver participantes de un programa
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
@@ -46,6 +53,21 @@ export default function ProgramasPage() {
   useEffect(() => {
     loadPrograms();
   }, []);
+
+  const triggerAlert = (
+    variant: 'success' | 'error' | 'warning',
+    title: string,
+    description: string
+  ) => {
+    setAlertVariant(variant);
+    setAlertTitle(title);
+    setAlertDescription(description);
+    setShowAlert(true);
+
+    setTimeout(() => {
+      setShowAlert(false);
+    }, 5000);
+  };
 
   const loadPrograms = async () => {
     try {
@@ -81,7 +103,11 @@ export default function ProgramasPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      alert('El nombre es requerido');
+      triggerAlert(
+        'warning',
+        'Campo requerido',
+        'El nombre del programa es obligatorio.'
+      );
       return;
     }
 
@@ -89,34 +115,59 @@ export default function ProgramasPage() {
     try {
       if (editingProgram) {
         await attendanceService.updateProgram(editingProgram.external_id, formData);
-        alert('Programa actualizado correctamente');
+        triggerAlert(
+          'success',
+          'Programa actualizado',
+          `El programa "${formData.name}" se actualizó correctamente.`
+        );
       } else {
         await attendanceService.createProgram(formData);
-        alert('Programa creado correctamente');
+        triggerAlert(
+          'success',
+          'Programa creado',
+          `El programa "${formData.name}" se creó correctamente.`
+        );
       }
       handleCloseModal();
       loadPrograms();
     } catch (error) {
-      alert('Error al guardar el programa');
+      triggerAlert(
+        'error',
+        'Error al guardar',
+        'No se pudo guardar el programa. Intenta nuevamente.'
+      );
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (program: Program) => {
-    if (!confirm(`¿Estás seguro de eliminar el programa "${program.name}"?\n\nEsto también eliminará las sesiones y registros asociados.`)) {
-      return;
-    }
+    setProgramToDelete({ id: program.external_id, name: program.name });
+    setShowConfirmDelete(true);
+  };
 
-    setDeleting(program.external_id);
+  const confirmDelete = async () => {
+    if (!programToDelete) return;
+
+    setDeleting(programToDelete.id);
+    setShowConfirmDelete(false);
     try {
-      await attendanceService.deleteProgram(program.external_id);
-      alert('Programa eliminado correctamente');
+      await attendanceService.deleteProgram(programToDelete.id);
+      triggerAlert(
+        'success',
+        'Programa eliminado',
+        `El programa "${programToDelete.name}" se ha eliminado correctamente.`
+      );
       loadPrograms();
     } catch (error) {
-      alert('Error al eliminar el programa');
+      triggerAlert(
+        'error',
+        'Error al eliminar',
+        'No se pudo eliminar el programa. Intenta nuevamente.'
+      );
     } finally {
       setDeleting(null);
+      setProgramToDelete(null);
     }
   };
 
@@ -167,6 +218,17 @@ export default function ProgramasPage() {
           Nuevo Programa
         </button>
       </div>
+
+      {/* Alert */}
+      {showAlert && (
+        <div className="mb-6">
+          <Alert
+            variant={alertVariant}
+            title={alertTitle}
+            description={alertDescription}
+          />
+        </div>
+      )}
 
       {/* Programs Grid */}
       {programs.length === 0 ? (
@@ -430,6 +492,45 @@ export default function ProgramasPage() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Eliminación */}
+      {showConfirmDelete && programToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-dark rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
+                <span className="material-symbols-outlined text-red-600 dark:text-red-400">warning</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Confirmar eliminación</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Esta acción no se puede deshacer</p>
+              </div>
+            </div>
+            <p className="text-gray-700 dark:text-gray-300 mb-6">
+              ¿Estás seguro de eliminar el programa <strong>"{programToDelete.name}"</strong>?
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmDelete(false);
+                  setProgramToDelete(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+              >
+                Eliminar
+              </button>
             </div>
           </div>
         </div>

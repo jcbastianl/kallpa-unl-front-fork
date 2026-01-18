@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { attendanceService } from '@/services/attendance.services';
 import type { Schedule, Participant, Program } from '@/types/attendance';
+import { Alert } from '@/components/ui-elements/alert';
 
 function Loading() {
   return (
@@ -25,6 +26,10 @@ export default function Registro() {
   const [isEditing, setIsEditing] = useState(false);
   const [currentProgram, setCurrentProgram] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertVariant, setAlertVariant] = useState<'success' | 'error' | 'warning'>('success');
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertDescription, setAlertDescription] = useState('');
 
   // Si viene de una sesión específica, no mostrar selectores
   const hasPreselectedSession = searchParams.get('session') !== null;
@@ -37,6 +42,21 @@ export default function Registro() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   });
   const [attendance, setAttendance] = useState<Record<string, string>>({});
+
+  const triggerAlert = (
+    variant: 'success' | 'error' | 'warning',
+    title: string,
+    description: string
+  ) => {
+    setAlertVariant(variant);
+    setAlertTitle(title);
+    setAlertDescription(description);
+    setShowAlert(true);
+
+    setTimeout(() => {
+      setShowAlert(false);
+    }, 5000);
+  };
 
   useEffect(() => {
     loadData();
@@ -59,34 +79,51 @@ export default function Registro() {
   useEffect(() => {
     const sessionParam = searchParams.get('session');
     const dateParam = searchParams.get('date');
-    if (sessionParam && dateParam && participants.length > 0) {
-      loadExistingAttendance(sessionParam, dateParam);
-    } else if (participants.length > 0) {
-      const initial: Record<string, string> = {};
-      participants.forEach(p => {
-        initial[p.id] = 'PRESENT';
-      });
-      setAttendance(initial);
+    
+    // Solo cargar asistencia si hay participantes y el estado de attendance está vacío
+    if (participants.length > 0 && Object.keys(attendance).length === 0) {
+      if (sessionParam && dateParam) {
+        loadExistingAttendance(sessionParam, dateParam);
+      } else {
+        // Inicializar con PRESENT solo si no hay nada cargado
+        const initial: Record<string, string> = {};
+        participants.forEach(p => {
+          initial[p.id] = 'PRESENT';
+        });
+        setAttendance(initial);
+      }
     }
-  }, [participants, searchParams]);
+  }, [participants]);
 
   const loadExistingAttendance = async (scheduleId: string, date: string) => {
     if (!scheduleId) return;
     try {
-      const res = await attendanceService.getSessionDetail(scheduleId, date);
-      const records = res.data.data?.records || [];
+      // Usar el endpoint general de history con filtros ya que el endpoint específico no funciona
+      const res = await attendanceService.getHistory(date, date, scheduleId);
+      const allRecords = res.data.data || [];
 
-      if (records.length > 0) {
+      if (allRecords.length > 0) {
         setIsEditing(true);
         const existingAttendance: Record<string, string> = {};
-        records.forEach((r: any) => {
-          existingAttendance[r.participant_id] = r.status;
+        
+        allRecords.forEach((r: any) => {
+          // Normalizar el ID del participante
+          const participantId = r.participant?.external_id || r.participant?.id || r.participant_id || r.participantId;
+          // Normalizar el estado (convertir a mayúsculas)
+          const status = (r.status || r.attendance_status || 'present').toUpperCase();
+          
+          if (participantId) {
+            existingAttendance[participantId] = status;
+          }
         });
+        
+        // Para participantes que no tienen registro, usar PRESENT por defecto
         participants.forEach(p => {
           if (!existingAttendance[p.id]) {
             existingAttendance[p.id] = 'PRESENT';
           }
         });
+        
         setAttendance(existingAttendance);
       } else {
         const initial: Record<string, string> = {};
@@ -150,12 +187,15 @@ export default function Registro() {
     try {
       const participantsRes = await attendanceService.getParticipantsByProgram(program);
       const rawParticipants = participantsRes.data.data || [];
-      const normalizedParticipants = rawParticipants.map((p: any) => ({
-        ...p,
-        id: p.external_id || p.id,
-        name: p.name || `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim(),
-        status: (p.status === 'active' || p.status === 'ACTIVO') ? 'ACTIVO' : 'INACTIVO'
-      })) as Participant[];
+      const normalizedParticipants = rawParticipants.map((p: any) => {
+        const fullName = p.name || `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim();
+        return {
+          ...p,
+          id: p.external_id || p.id,
+          name: fullName || 'Sin nombre',
+          status: (p.status === 'active' || p.status === 'ACTIVO') ? 'ACTIVO' : 'INACTIVO'
+        };
+      }) as Participant[];
 
       setAllParticipants(normalizedParticipants);
       setParticipants(normalizedParticipants);
@@ -174,12 +214,15 @@ export default function Registro() {
       // Load participants - filtered by program if available, otherwise all
       const participantsRes = await attendanceService.getParticipantsByProgram(currentProgram || undefined);
       const rawParticipants = participantsRes.data.data || [];
-      const normalizedParticipants = rawParticipants.map((p: any) => ({
-        ...p,
-        id: p.external_id || p.id,
-        name: p.name || `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim(),
-        status: (p.status === 'active' || p.status === 'ACTIVO') ? 'ACTIVO' : 'INACTIVO'
-      })) as Participant[];
+      const normalizedParticipants = rawParticipants.map((p: any) => {
+        const fullName = p.name || `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim();
+        return {
+          ...p,
+          id: p.external_id || p.id,
+          name: fullName || 'Sin nombre',
+          status: (p.status === 'active' || p.status === 'ACTIVO') ? 'ACTIVO' : 'INACTIVO'
+        };
+      }) as Participant[];
 
       // Mantener el estado de asistencia de los participantes existentes
       // y agregar los nuevos con estado 'PRESENT' por defecto
@@ -218,7 +261,11 @@ export default function Registro() {
     e.preventDefault();
 
     if (!selectedSchedule) {
-      alert('Selecciona una sesión');
+      triggerAlert(
+        'warning',
+        'Selección requerida',
+        'Por favor selecciona una sesión antes de guardar.'
+      );
       return;
     }
 
@@ -241,21 +288,33 @@ export default function Registro() {
 
       setSuccess(true);
       setIsEditing(true);
+      triggerAlert(
+        'success',
+        'Asistencia guardada',
+        `Se registró la asistencia de ${records.length} participante(s) correctamente.`
+      );
       setTimeout(() => setSuccess(false), 3000);
-    } catch (error) {
-      alert('Error al guardar la asistencia');
+    } catch (error: any) {
+      triggerAlert(
+        'error',
+        'Error al guardar',
+        error?.response?.data?.message || error?.message || 'No se pudo guardar la asistencia. Intenta nuevamente.'
+      );
     } finally {
       setSaving(false);
     }
   };
 
-  const getInitials = (name: string) => {
-    if (!name) return '??';
-    const parts = name.split(' ');
+  const getInitials = (name: string | undefined) => {
+    if (!name || name.trim() === '') return '??';
+    const parts = name.trim().split(' ').filter(p => p.length > 0);
     if (parts.length >= 2) {
       return (parts[0][0] + parts[1][0]).toUpperCase();
     }
-    return name.substring(0, 2).toUpperCase();
+    if (parts.length === 1 && parts[0].length >= 2) {
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+    return parts[0]?.[0]?.toUpperCase() || '??';
   };
 
   const selectedScheduleData = schedules.find(s => String(s.id) === selectedSchedule);
@@ -274,11 +333,14 @@ export default function Registro() {
         </p>
       </div>
 
-      {/* Success Message */}
-      {success && (
-        <div className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 flex items-center gap-3">
-          <span className="material-symbols-outlined text-green-600">check_circle</span>
-          <span className="text-green-700 dark:text-green-400 font-medium">Asistencia guardada correctamente</span>
+      {/* Alert */}
+      {showAlert && (
+        <div className="mb-6">
+          <Alert
+            variant={alertVariant}
+            title={alertTitle}
+            description={alertDescription}
+          />
         </div>
       )}
 

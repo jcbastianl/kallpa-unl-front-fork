@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { attendanceService } from '@/services/attendance.services';
 import type { Session, Participant, Schedule, Program } from '@/types/attendance';
+import { Alert } from '@/components/ui-elements/alert';
+import ErrorMessage from '@/components/FormElements/errormessage';
 
 function StatCard({ icon, iconBg, label, value }: { icon: string; iconBg: string; label: string; value: string | number }) {
   return (
@@ -39,6 +41,13 @@ export default function DashboardAsistencia() {
   const [currentDate] = useState(new Date());
   const [editingSession, setEditingSession] = useState<Schedule | null>(null);
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertVariant, setAlertVariant] = useState<'success' | 'error' | 'warning'>('success');
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertDescription, setAlertDescription] = useState('');
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState<{id: string | number, name: string} | null>(null);
+  const [editEndDateError, setEditEndDateError] = useState<string>('');
   const PROGRAM_COLORS = [
     { value: '#3B82F6', label: 'Azul' },
     { value: '#10B981', label: 'Verde' },
@@ -51,6 +60,21 @@ export default function DashboardAsistencia() {
   ];
   const [deleting, setDeleting] = useState<string | number | null>(null);
 
+  const triggerAlert = (
+    variant: 'success' | 'error' | 'warning',
+    title: string,
+    description: string
+  ) => {
+    setAlertVariant(variant);
+    setAlertTitle(title);
+    setAlertDescription(description);
+    setShowAlert(true);
+
+    setTimeout(() => {
+      setShowAlert(false);
+    }, 5000);
+  };
+
   // Fixed program options
   const PROGRAM_OPTIONS = [
     { value: 'INICIACION', label: 'Iniciación' },
@@ -59,6 +83,25 @@ export default function DashboardAsistencia() {
 
   useEffect(() => {
     loadData();
+
+    // Recargar datos cuando la página se vuelve visible (cuando vuelve del registro)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Recargar datos cada 30 segundos para mantener actualizado
+    const interval = setInterval(() => {
+      loadData();
+    }, 30000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(interval);
+    };
   }, []);
 
   const loadData = async () => {
@@ -273,20 +316,35 @@ export default function DashboardAsistencia() {
   };
 
   const handleDelete = async (sessionId: string | number, sessionName: string) => {
-    if (!confirm(`¿Estás seguro de eliminar la sesión "${sessionName}"?\n\nEsta acción eliminará:\n• La sesión programada del horario\n• Los registros de asistencia asociados`)) return;
+    setSessionToDelete({ id: sessionId, name: sessionName });
+    setShowConfirmDelete(true);
+  };
 
-    setDeleting(sessionId);
+  const confirmDelete = async () => {
+    if (!sessionToDelete) return;
+
+    setDeleting(sessionToDelete.id);
+    setShowConfirmDelete(false);
     try {
-      await attendanceService.deleteSchedule(String(sessionId));
+      await attendanceService.deleteSchedule(String(sessionToDelete.id));
       // Eliminar de todas las listas
-      setUpcomingSessions(prev => prev.filter(s => (s.external_id || s.id) !== sessionId));
-      setTodaySchedules(prev => prev.filter(s => ((s as any).external_id || s.id) !== sessionId));
-      alert('Sesión eliminada correctamente');
+      setUpcomingSessions(prev => prev.filter(s => (s.external_id || s.id) !== sessionToDelete.id));
+      setTodaySchedules(prev => prev.filter(s => ((s as any).external_id || s.id) !== sessionToDelete.id));
+      triggerAlert(
+        'success',
+        'Sesión eliminada',
+        `La sesión "${sessionToDelete.name}" se ha eliminado correctamente.`
+      );
       loadData(); // Recargar todos los datos
     } catch (error) {
-      alert('Error al eliminar la sesión');
+      triggerAlert(
+        'error',
+        'Error al eliminar',
+        'No se pudo eliminar la sesión. Intenta nuevamente.'
+      );
     } finally {
       setDeleting(null);
+      setSessionToDelete(null);
     }
   };
 
@@ -302,31 +360,60 @@ export default function DashboardAsistencia() {
     const sessionId = editingSession.external_id || editingSession.id;
 
     const dayMap: Record<string, string> = {
-      'Lunes': 'monday', 'Martes': 'tuesday', 'Miércoles': 'wednesday',
-      'Jueves': 'thursday', 'Viernes': 'friday', 'Sábado': 'saturday', 'Domingo': 'sunday'
+      'lunes': 'MONDAY', 'martes': 'TUESDAY', 'miércoles': 'WEDNESDAY', 'miercoles': 'WEDNESDAY',
+      'jueves': 'THURSDAY', 'viernes': 'FRIDAY', 'sábado': 'SATURDAY', 'sabado': 'SATURDAY', 'domingo': 'SUNDAY',
+      'monday': 'MONDAY', 'tuesday': 'TUESDAY', 'wednesday': 'WEDNESDAY',
+      'thursday': 'THURSDAY', 'friday': 'FRIDAY', 'saturday': 'SATURDAY', 'sunday': 'SUNDAY'
     };
-    const dayValue = formData.get('day_of_week') as string;
+    const dayValue = (formData.get('day_of_week') as string)?.toLowerCase();
+    const endDate = formData.get('end_date') as string;
+
+    // Validar fecha fin para sesiones recurrentes
+    if (dayValue && endDate && !formData.get('specific_date')) {
+      const endDateObj = new Date(endDate + 'T12:00:00');
+      const dayOfWeek = endDateObj.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
+      
+      const dayMapping: Record<string, number> = {
+        'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6, 'sunday': 0,
+        'lunes': 1, 'martes': 2, 'miercoles': 3, 'miércoles': 3, 'jueves': 4, 'viernes': 5, 'sabado': 6, 'sábado': 6, 'domingo': 0
+      };
+
+      const expectedDay = dayMapping[dayValue];
+      if (expectedDay !== dayOfWeek) {
+        const dayNames: Record<number, string> = { 0: 'domingo', 1: 'lunes', 2: 'martes', 3: 'miércoles', 4: 'jueves', 5: 'viernes', 6: 'sábado' };
+        setEditEndDateError(`La fecha fin debe ser un ${dayNames[expectedDay]}. La fecha seleccionada es ${dayNames[dayOfWeek]}.`);
+        return;
+      }
+    }
+    
+    setEditEndDateError('');
 
     const data = {
       name: formData.get('name') as string,
       program: formData.get('program') as string,
-      day_of_week: dayMap[dayValue] || dayValue,
-      start_time: formData.get('start_time') as string,
-      end_time: formData.get('end_time') as string,
+      dayOfWeek: dayMap[dayValue] || dayValue?.toUpperCase(),
+      startTime: formData.get('start_time') as string,
+      endTime: formData.get('end_time') as string,
       location: formData.get('location') as string,
-      program_id: (formData.get('program_id') as string) || undefined,
-      specific_date: formData.get('specific_date') as string || undefined,
-      start_date: formData.get('start_date') as string || undefined,
-      end_date: formData.get('end_date') as string || undefined,
+      specificDate: formData.get('specific_date') as string || undefined,
+      endDate: endDate || undefined,
     };
 
     try {
       await attendanceService.updateSchedule(String(sessionId), data);
       setEditingSession(null);
       loadData(); // Recargar datos
-      alert('Sesión actualizada correctamente');
+      triggerAlert(
+        'success',
+        'Sesión actualizada',
+        'Los cambios se han guardado correctamente.'
+      );
     } catch (error) {
-      alert('Error al actualizar la sesión');
+      triggerAlert(
+        'error',
+        'Error al actualizar',
+        'No se pudieron guardar los cambios. Intenta nuevamente.'
+      );
     }
   };
 
@@ -362,6 +449,17 @@ export default function DashboardAsistencia() {
           {formatDate(currentDate)}
         </p>
       </div>
+
+      {/* Alert */}
+      {showAlert && (
+        <div className="mb-6">
+          <Alert
+            variant={alertVariant}
+            title={alertTitle}
+            description={alertDescription}
+          />
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -408,103 +506,105 @@ export default function DashboardAsistencia() {
                 const location = (schedule as any).location || '';
                 const scheduleId = (schedule as any).external_id || schedule.id;
 
-                // Buscar en el historial de hoy si hay asistencia registrada para esta sesión
-                const historyRecord = todayHistory.find((h: any) =>
-                  h.schedule_id === scheduleId ||
-                  h.scheduleId === scheduleId ||
-                  h.schedule_id === (schedule as any).external_id ||
-                  h.scheduleId === (schedule as any).external_id
-                );
+                // Buscar TODOS los registros de asistencia para esta sesión
+                const historyRecords = todayHistory.filter((h: any) => {
+                  const hScheduleId = h.schedule?.external_id || h.schedule?.externalId;
+                  return hScheduleId === scheduleId;
+                });
 
-                const isCompleted = historyRecord && (historyRecord.present_count > 0 || historyRecord.presentCount > 0 || historyRecord.total > 0);
-                const presentCount = historyRecord?.present_count || historyRecord?.presentCount || 0;
-                const totalCount = historyRecord?.total || historyRecord?.total_count || historyRecord?.totalCount || 0;
+                // Si hay registros, la sesión está completada
+                const isCompleted = historyRecords.length > 0;
+                
+                // Contar presentes y total
+                const presentCount = historyRecords.filter((h: any) => h.status === 'present').length;
+                const totalCount = historyRecords.length;
+
+                // Obtener información del programa
+                const prog = programs.find(p => {
+                  const pid = (schedule as any).program_id || (schedule as any).programId || null;
+                  if (!pid) return false;
+                  return p.external_id === String(pid) || p.id === pid || String(p.id) === String(pid) || p.name === (schedule as any).program_name;
+                }) || null;
+
+                const programDisplayName = (schedule as any).program || (schedule as any).program_name || prog?.name || null;
+                const progColor = prog?.color || '#3B82F6';
 
                 return (
                   <div
                     key={scheduleId}
-                    className={`border rounded-lg p-4 transition-colors ${isCompleted
-                      ? 'border-green-300 bg-green-50 dark:bg-green-900/20'
-                      : 'border-gray-200 dark:border-gray-600 hover:border-blue-300'
-                      }`}
+                    className={`relative rounded-lg transition-all duration-300 overflow-hidden ${
+                      isCompleted
+                        ? 'bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border border-emerald-300 dark:border-emerald-700'
+                        : 'bg-white dark:bg-gray-dark border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600'
+                    }`}
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white">{schedule.name}</h3>
-                        {(() => {
-                          const prog = programs.find(p => {
-                            const pid = (schedule as any).program_id || (schedule as any).programId || null;
-                            if (!pid) return false;
-                            // Match by external_id or numeric id
-                            return p.external_id === String(pid) || p.id === pid || String(p.id) === String(pid) || p.name === (schedule as any).program_name;
-                          }) || null;
+                    {/* Barra superior de color */}
+                    <div className={`h-1 w-full ${
+                      isCompleted ? 'bg-emerald-500' : 'bg-blue-500'
+                    }`}></div>
 
-                          const programDisplayName = (schedule as any).program_name || prog?.name || null;
-                          if (!programDisplayName) return null;
-
-                          const progColor = prog?.color || '#3B82F6';
-                          const label = PROGRAM_COLORS.find(c => c.value.toLowerCase() === progColor.toLowerCase())?.label || 'Programa';
-
-                          return (
-                            <div className="mt-1">
-                              <p className="text-sm text-gray-700 dark:text-gray-300">{programDisplayName}</p>
+                    <div className="p-4">
+                      {/* Header con título y badge */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h3 className="font-bold text-base text-gray-900 dark:text-white mb-1">{schedule.name}</h3>
+                          {programDisplayName && (
+                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800">
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: progColor }}></span>
+                              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{programDisplayName}</span>
                             </div>
-                          );
-                        })()}
-                        {location && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{location}</p>}
-                      </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${isCompleted
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-yellow-100 text-yellow-700'
+                          )}
+                        </div>
+                        <span className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
+                          isCompleted
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
                         }`}>
-                        {isCompleted ? '✓ Completada' : 'Pendiente'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-base">calendar_today</span>
-                        {formatShortDate(currentDate)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                      <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-base">schedule</span>
-                        {startTime} - {endTime}
-                      </span>
-                      {isCompleted && (
-                        <span className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-base">group</span>
-                          {presentCount}/{totalCount}
+                          <span className="text-sm">
+                            {isCompleted ? '✓' : '⌛'}
+                          </span>
+                          {isCompleted ? 'Completada' : 'Pendiente'}
                         </span>
-                      )}
-                    </div>
+                      </div>
 
-                    {/* Botones de acción */}
-                    <div className="mt-3 flex gap-2">
+                      {/* Información de la sesión */}
+                      <div className="space-y-2 mb-3">
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <span className="text-base">⏰</span>
+                          <span className="font-medium">{startTime} - {endTime}</span>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <span className="text-base">📅</span>
+                          <span>{formatShortDate(currentDate)}</span>
+                        </div>
+
+                        {location && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <span className="text-base">📍</span>
+                            <span>{location}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Botón de acción */}
                       {scheduleId ? (
                         <Link
-                          href={`/pages/attendance/registro?session=${scheduleId}`}
-                          className={`flex-1 text-center py-2 rounded-lg text-sm font-medium transition-colors ${isCompleted
-                            ? 'bg-gray-600 text-white hover:bg-gray-700'
-                            : 'bg-blue-800 text-white hover:bg-blue-900'
-                            }`}
+                          href={`/pages/attendance/registro?session=${scheduleId}&date=${currentDate.toISOString().split('T')[0]}`}
+                          className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                            isCompleted
+                              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                              : 'bg-blue-600 text-white hover:bg-blue-700'
+                          }`}
                         >
+                          <span className="text-base">{isCompleted ? '✏️' : '✅'}</span>
                           {isCompleted ? 'Editar Asistencia' : 'Registrar Asistencia'}
                         </Link>
                       ) : (
-                        <button disabled className="flex-1 text-center py-2 rounded-lg text-sm font-medium bg-gray-300 text-gray-500 cursor-not-allowed">
+                        <button disabled className="w-full py-2 rounded-lg text-sm font-medium bg-gray-300 text-gray-500 cursor-not-allowed">
                           No disponible
                         </button>
                       )}
-
-                      <button
-                        onClick={() => handleDelete(scheduleId, schedule.name)}
-                        className="px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
-                        title="Eliminar sesión"
-                      >
-                        <span className="material-symbols-outlined">delete</span>
-                      </button>
-
                     </div>
                   </div>
                 );
@@ -529,54 +629,70 @@ export default function DashboardAsistencia() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {upcomingSessions.map((session, index) => {
                 const sessionId = session.external_id || session.id;
+                const programName = (session as any).program || (session as any).program_name || null;
                 return (
                   <div
                     key={`${session.id}-${index}`}
-                    className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:border-purple-300 transition-colors"
+                    className="relative rounded-lg transition-all duration-300 overflow-hidden bg-white dark:bg-gray-dark border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600"
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white">{session.name}</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{(session as any).day_of_week_es || session.program}</p>
-                      </div>
-                      <span className="px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700">
-                        Próxima
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-base">calendar_today</span>
-                        {formatShortDate((session as any).nextDate)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                      <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-base">schedule</span>
-                        {session.start_time} - {session.end_time}
-                      </span>
-                      {session.location && (
-                        <span className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-base">location_on</span>
-                          {session.location}
+                    {/* Barra superior de color */}
+                    <div className="h-1 w-full bg-purple-500"></div>
+
+                    <div className="p-4">
+                      {/* Header con título y badge */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h3 className="font-bold text-base text-gray-900 dark:text-white mb-1">{session.name}</h3>
+                          {programName && (
+                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800">
+                              <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{programName}</span>
+                            </div>
+                          )}
+                        </div>
+                        <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                          <span className="text-sm">📅</span>
+                          Próxima
                         </span>
-                      )}
-                    </div>
-                    {/* Botón Editar */}
-                    <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                      <button
-                        onClick={() => handleEdit(session)}
-                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-base">edit</span>
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleDelete(sessionId, session.name)}
-                        className="px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
-                        title="Eliminar sesión"
-                      >
-                        <span className="material-symbols-outlined">delete</span>
-                      </button>
+                      </div>
+
+                      {/* Información de la sesión */}
+                      <div className="space-y-2 mb-3">
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <span className="text-base">⏰</span>
+                          <span className="font-medium">{session.start_time} - {session.end_time}</span>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <span className="text-base">📆</span>
+                          <span>{formatShortDate((session as any).nextDate)}</span>
+                        </div>
+
+                        {session.location && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <span className="text-base">📍</span>
+                            <span>{session.location}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Botones de acción */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEdit(session)}
+                          className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 transition-colors"
+                        >
+                          <span className="text-base">✏️</span>
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDelete(sessionId, session.name)}
+                          className="p-2 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          title="Eliminar sesión"
+                        >
+                          <span className="text-base">🗑️</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -663,6 +779,7 @@ export default function DashboardAsistencia() {
                     <select
                       name="day_of_week"
                       defaultValue={editingSession.day_of_week || ''}
+                      onChange={() => setEditEndDateError('')}
                       required
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
                     >
@@ -675,25 +792,18 @@ export default function DashboardAsistencia() {
                       <option value="sunday">Domingo</option>
                     </select>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha inicio</label>
-                      <input
-                        type="date"
-                        name="start_date"
-                        defaultValue={editingSession.start_date || ''}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha fin</label>
-                      <input
-                        type="date"
-                        name="end_date"
-                        defaultValue={editingSession.end_date || ''}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha fin (opcional)</label>
+                    <input
+                      type="date"
+                      name="end_date"
+                      defaultValue={editingSession.end_date || ''}
+                      onChange={() => setEditEndDateError('')}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">La fecha debe coincidir con el día de la semana seleccionado</p>
+                    <ErrorMessage message={editEndDateError} />
                   </div>
                 </>
               )}
@@ -701,23 +811,35 @@ export default function DashboardAsistencia() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hora inicio</label>
-                  <input
-                    type="time"
+                  <select
                     name="start_time"
                     defaultValue={editingSession.start_time || ''}
                     required
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                  />
+                  >
+                    <option value="">Seleccionar hora</option>
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={`${i.toString().padStart(2, '0')}:00`}>
+                        {`${i.toString().padStart(2, '0')}:00`}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hora fin</label>
-                  <input
-                    type="time"
+                  <select
                     name="end_time"
                     defaultValue={editingSession.end_time || ''}
                     required
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                  />
+                  >
+                    <option value="">Seleccionar hora</option>
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={`${i.toString().padStart(2, '0')}:00`}>
+                        {`${i.toString().padStart(2, '0')}:00`}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div>
@@ -729,19 +851,6 @@ export default function DashboardAsistencia() {
                   placeholder="Ej: Gimnasio principal"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Programa (opcional)</label>
-                <select
-                  name="program_id"
-                  defaultValue={(editingSession as any).program_id || (editingSession as any).programId || ''}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                >
-                  <option value="">Sin programa</option>
-                  {programs.map(p => (
-                    <option key={p.external_id} value={p.external_id}>{p.name}</option>
-                  ))}
-                </select>
               </div>
               <div className="flex gap-3 pt-4">
                 <button
@@ -759,6 +868,45 @@ export default function DashboardAsistencia() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Eliminación */}
+      {showConfirmDelete && sessionToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-dark rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
+                <span className="material-symbols-outlined text-red-600 dark:text-red-400">warning</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Confirmar eliminación</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Esta acción no se puede deshacer</p>
+              </div>
+            </div>
+            <p className="text-gray-700 dark:text-gray-300 mb-6">
+              ¿Estás seguro de eliminar la sesión <strong>"{sessionToDelete.name}"</strong>?
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmDelete(false);
+                  setSessionToDelete(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+              >
+                Eliminar
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -86,19 +86,17 @@ export interface CreateProgramData {
 export interface CreateScheduleData {
   name: string;
   program: string;
-  start_time: string;
-  end_time: string;
+  startTime: string;     // ✅ Backend espera camelCase
+  endTime: string;       // ✅ Backend espera camelCase
   location?: string;
-  capacity?: number;
-  max_slots?: number; // Added to match Schedule Object
+  maxSlots?: number;     // ✅ Backend espera camelCase
   description?: string;
-  program_id?: string;  // ID del programa asociado
+  program_id?: string;
   // Para sesiones recurrentes
-  day_of_week?: string;
-  start_date?: string;   // Opcional: desde cuándo aplica
-  end_date?: string;     // Opcional: hasta cuándo aplica
+  dayOfWeek?: string;    // ✅ Backend espera camelCase y UPPERCASE
+  endDate?: string;      // ✅ Backend espera camelCase
   // Para sesiones con fecha específica
-  specific_date?: string; // Fecha específica (YYYY-MM-DD)
+  specificDate?: string; // ✅ Backend espera camelCase
 }
 
 export interface SessionDetail {
