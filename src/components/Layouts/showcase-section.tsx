@@ -7,6 +7,7 @@ type PropsType = {
   description?: string;
   children?: ReactNode;
   className?: string;
+  badgeText?: string,
 };
 
 export function ShowcaseSection({
@@ -15,6 +16,7 @@ export function ShowcaseSection({
   description,
   children,
   className,
+  badgeText = "Nuevo Ingreso",
 }: PropsType) {
   return (
     <div
@@ -46,7 +48,7 @@ export function ShowcaseSection({
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
             <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
           </span>
-          Nuevo Ingreso
+          {badgeText}
         </div>
       </div>
       {children && <div className="p-6 sm:p-6 xl:p-10">{children}</div>}

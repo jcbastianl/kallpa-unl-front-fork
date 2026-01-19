@@ -158,3 +158,15 @@ export const getParticipantProgress = async (
 
   return response.data;
 };
+
+export const getTestById = async (
+  external_id: string
+): Promise<any> => {
+  const response = await get<ApiResponse<any>>(`/get-test/${external_id}`);
+
+  if (response.status !== "ok") {
+    throw new Error(response.msg || "Error al obtener el detalle del test");
+  }
+
+  return response.data;
+};

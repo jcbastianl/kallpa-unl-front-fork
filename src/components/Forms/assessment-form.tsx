@@ -1,16 +1,23 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import InputGroup from "@/components/FormElements/InputGroup";
 import { ShowcaseSection } from "@/components/Layouts/showcase-section";
 import { FiCalendar, FiClipboard, FiEdit, FiSave } from "react-icons/fi";
 import ErrorMessage from "../FormElements/errormessage";
 import { TextAreaGroup } from "../FormElements/InputGroup/text-area";
 import { saveTest } from "@/hooks/api";
-import { TestData } from "@/types/test";
 import { Select } from "../FormElements/select";
 import { Alert } from "@/components/ui-elements/alert";
 
-export function AssessmentForm() {
+interface AssessmentInitialData {
+  external_id?: string;
+  name: string;
+  description: string;
+  frequency_months: number | string;
+  exercises: { name: string; unit: string }[];
+}
+
+export function AssessmentForm({ initialData }: { initialData?: AssessmentInitialData }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -18,9 +25,17 @@ export function AssessmentForm() {
   const [exercises, setExercises] = useState<{ name: string; unit: string }[]>([
     { name: "", unit: "" },
   ]);
+  useEffect(() => {
+    if (initialData) {
+      setName(initialData.name);
+      setDescription(initialData.description);
+      setFrequencyMonths(initialData.frequency_months.toString());
+      setExercises(initialData.exercises);
+    }
+  }, [initialData]);
 
+  const isEditing = !!initialData?.external_id;
   const [loading, setLoading] = useState(false);
-
   const [showAlert, setShowAlert] = useState(false);
   const [alertVariant, setAlertVariant] = useState<
     "success" | "warning" | "error"
@@ -47,6 +62,7 @@ export function AssessmentForm() {
         name: e.name.trim(),
         unit: e.unit.trim(),
       })),
+      external_id: initialData?.external_id
     };
 
     if (frequencyMonths !== "") {
@@ -57,13 +73,16 @@ export function AssessmentForm() {
 
     try {
       setLoading(true);
-      const res = await saveTest(payload);
+      const res = isEditing 
+      //aqui llamas al updateTest--->AJILA
+        ? await saveTest(payload) 
+        : await saveTest(payload);
 
       if (res.status === "ok") {
         setAlertVariant("success");
         setAlertMessage({
-          title: "Test creado correctamente",
-          description: "El test se guardó exitosamente",
+          title: isEditing ? "Test actualizado" : "Test creado",
+          description: "Los cambios se guardaron correctamente",
         });
         setShowAlert(true);
         setName("");
@@ -113,8 +132,13 @@ export function AssessmentForm() {
   return (
     <ShowcaseSection
       icon={<FiEdit size={24} />}
-      title="Registro Nuevo Test"
-      description="Ingresa los datos para crear un nuevo test"
+      title={isEditing ? "Editar Evaluación" : "Registro Nuevo Test"}
+      description={
+        isEditing 
+          ? `Modificando los datos de: ${initialData?.name}` 
+          : "Ingresa los datos para crear un nuevo test"
+      }
+      badgeText={isEditing ? "Modo Edición" : "Nuevo Ingreso"}
     >
       {showAlert && (
         <Alert
@@ -346,7 +370,7 @@ export function AssessmentForm() {
               <FiSave size={18} />
             </div>
             <span className="text-lg">
-              {loading ? "Guardando..." : "Guardar Test"}
+              {loading ? "Procesando..." : isEditing ? "Actualizar Test" : "Guardar Test"}
             </span>
           </button>
         </div>

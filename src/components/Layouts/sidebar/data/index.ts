@@ -74,13 +74,18 @@ export const NAV_DATA: NavSection[] = [
         roles: ["PASANTE"],
         items: [
           {
-            title: "Registrar Test",
+            title: "Crear Evaluación",
             url: "/evolution/form-test",
             roles: ["ADMINISTRADOR", "DOCENTE"]
           },
           {
-            title: "Asignar Test",
+            title: "Aplicar Evaluación",
             url: "/evolution/assign-test",
+            roles: ["PASANTE", "ADMINISTRADOR", "DOCENTE"]
+          },
+          {
+            title: "Evaluaciones Registradas",
+            url: "/evolution/list-test",
             roles: ["PASANTE", "ADMINISTRADOR", "DOCENTE"]
           },
         ],
