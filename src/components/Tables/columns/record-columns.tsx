@@ -21,19 +21,27 @@ export const recordColumns = (
   },
   {
     header: "Peso",
-    accessor: (a) => <span className="text-gray-400">{a.weight}</span>,
+    accessor: (a) => <span className="text-gray-400">{a.weight} kg</span>,
   },
   {
     header: "Altura",
-    accessor: (a) => <span className="text-gray-400">{a.height}</span>,
+    accessor: (a) => <span className="text-gray-400">{a.height} m</span>,
   },
   {
-    header: "Permitro cintura",
-    accessor: (a) => <span className="text-gray-400">{a.waistPerimeter}</span>,
+    header: "Cintura",
+    accessor: (a) => <span className="text-gray-400">{a.waistPerimeter} cm</span>,
   },
   {
-    header: "Envergadura",
-    accessor: (a) => <span className="text-gray-400">{a.wingspan}</span>,
+    header: "Brazo",
+    accessor: (a) => <span className="text-gray-400">{a.armPerimeter} cm</span>,
+  },
+  {
+    header: "Pierna",
+    accessor: (a) => <span className="text-gray-400">{a.legPerimeter} cm</span>,
+  },
+  {
+    header: "Pantorrilla",
+    accessor: (a) => <span className="text-gray-400">{a.calfPerimeter} cm</span>,
   },
   {
     header: "IMC (BMI)",

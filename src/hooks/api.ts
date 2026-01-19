@@ -4,6 +4,7 @@ import type { Participant, InitiationRequest } from "@/types/participant";
 import { AssessmentData, AssessmentResponseData, BmiDistributionItem } from "@/types/assessment";
 import type { LoginRequest, LoginResponse } from "@/types/auth";
 import {
+  ParticipantProgressResponse,
   RegisterTestFormData,
   TestData,
   TestHistoryData,
@@ -144,22 +145,16 @@ export const getTestsForParticipant = async (
   return response.data;
 };
 
-export const getTestHistory = async (
-  participantExternalId: string,
-  testExternalId: string,
-  months: number = 6,
-  startDate?: string,   // YYYY-MM-DD opcional
-  endDate?: string,     // YYYY-MM-DD opcional
-): Promise<ApiResponse<TestHistoryData>> => {
-  const params = new URLSearchParams({
-    participant_external_id: participantExternalId,
-    test_external_id: testExternalId,
-    months: months.toString(),
-  });
+export const getParticipantProgress = async (
+  participant_external_id: string,
+): Promise<ParticipantProgressResponse> => {
+  const response = await get<ApiResponse<ParticipantProgressResponse>>(
+    `/participant-progress?participant_external_id=${participant_external_id}`,
+  );
 
-  if (startDate) params.append("start_date", startDate);
-  if (endDate) params.append("end_date", endDate);
+  if (response.code !== 200) {
+    throw new Error(response.msg || "Error al obtener progreso");
+  }
 
-  const response = await get<ApiResponse<TestHistoryData>>(`/history?${params.toString()}`);
-  return response;
+  return response.data;
 };

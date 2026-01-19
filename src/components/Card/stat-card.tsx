@@ -27,7 +27,7 @@ export const StatCard = ({
   const isPositive = trend === 'up';
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-[#1a2233]">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-dark-2">
 
       <div className="flex items-start justify-between">
         <div>

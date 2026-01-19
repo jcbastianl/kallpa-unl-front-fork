@@ -90,3 +90,18 @@ export interface TestHistoryData {
     [exerciseExternalId: string]: TestHistoryExercise;
   };
 }
+
+export interface ProgressItem {
+  evaluation_external_id: string;
+  date: string;
+  general_observations: string;
+  results: Record<string, number>;
+  test_name: string;
+  total: number;
+}
+
+export interface ParticipantProgressResponse {
+  participant_name: string;
+  progress: ProgressItem[];
+}
+

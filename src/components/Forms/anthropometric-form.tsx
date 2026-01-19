@@ -4,9 +4,9 @@ import InputGroup from "@/components/FormElements/InputGroup";
 import { ShowcaseSection } from "@/components/Layouts/showcase-section";
 import {
   FiActivity,
-  FiClipboard,
   FiEdit,
   FiInfo,
+  FiRefreshCcw,
   FiSave,
   FiSearch,
   FiUser,
@@ -18,18 +18,21 @@ import DatePickerTwo from "../FormElements/DatePicker/DatePickerTwo";
 import { AssessmentData } from "@/types/assessment";
 import ErrorMessage from "../FormElements/errormessage";
 import { TbArrowsVertical, TbScale } from "react-icons/tb";
-import { LuHistory, LuRuler } from "react-icons/lu";
+import { LuRuler } from "react-icons/lu";
 import { Alert } from "@/components/ui-elements/alert";
+import { Search, X } from "lucide-react";
 
 export function AnthropometricForm() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [search, setSearch] = useState("");
   const [selectedParticipant, setSelectedParticipant] = useState<string>("");
-  const [weight, setWeight] = useState<number>(0);
-  const [height, setHeight] = useState<number>(0);
-  const [waistPerimeter, setWaistPerimeter] = useState<number>(0);
-  const [wingspan, setWingspan] = useState<number>(0);
+  const [weight, setWeight] = useState<string>("");
+  const [height, setHeight] = useState<string>("");
+  const [waistPerimeter, setWaistPerimeter] = useState<string>("");
+  const [armPerimeter, setArmPerimeter] = useState<string>("");
+  const [legPerimeter, setLegPerimeter] = useState<string>("");
+  const [calfPerimeter, setCalfPerimeter] = useState<string>("");
   const [bmi, setBmi] = useState<number | null>(null);
   const [date, setDate] = useState<string>("");
   const [status, setStatus] = useState<string>("");
@@ -38,12 +41,16 @@ export function AnthropometricForm() {
   const [alertType, setAlertType] = useState<"success" | "error">("success");
   const [alertTitle, setAlertTitle] = useState("");
   const [alertDescription, setAlertDescription] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
   const resetForm = () => {
     setSelectedParticipant("");
-    setWeight(0);
-    setHeight(0);
-    setWaistPerimeter(0);
-    setWingspan(0);
+    setWeight("");
+    setHeight("");
+    setWaistPerimeter("");
+    setCalfPerimeter("");
+    setLegPerimeter("");
+    setArmPerimeter("");
     const today = new Date();
     setDate(today.toISOString().split("T")[0]);
     setBmi(null);
@@ -70,15 +77,18 @@ export function AnthropometricForm() {
   );
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     setErrors({});
 
     const data: AssessmentData = {
       participant_external_id: selected?.external_id ?? "",
       date,
-      weight,
-      height,
-      waistPerimeter,
-      wingspan,
+      weight: Number(weight),
+      height: Number(height),
+      waistPerimeter: waistPerimeter === "" ? 0 : Number(waistPerimeter),
+      armPerimeter: armPerimeter === "" ? 0 : Number(armPerimeter),
+      legPerimeter: legPerimeter === "" ? 0 : Number(legPerimeter),
+      calfPerimeter: calfPerimeter === "" ? 0 : Number(calfPerimeter),
     };
 
     try {
@@ -115,6 +125,8 @@ export function AnthropometricForm() {
       setAlertDescription("No se pudo guardar la evaluación.");
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 3000);
+    } finally {
+      setIsSaving(false);
     }
   };
   const clearFieldError = (field: string) => {
@@ -131,39 +143,29 @@ export function AnthropometricForm() {
           text: "text-yellow-400",
           icon: "text-yellow-500",
           bar: "bg-yellow-400",
-          glow: "bg-yellow-500/10",
+          glow: "bg-yellow-500/20", // Color amarillito para el sombreado
         };
-
       case "Peso adecuado":
         return {
           text: "text-green-400",
           icon: "text-green-500",
           bar: "bg-green-500",
-          glow: "bg-green-500/10",
+          glow: "bg-green-500/20", // Color verde
         };
-
       case "Sobrepeso":
-        return {
-          text: "text-red-400",
-          icon: "text-red-500",
-          bar: "bg-red-500",
-          glow: "bg-red-500/10",
-        };
-
       case "Obesidad":
         return {
-          text: "text-red-600",
-          icon: "text-red-600",
-          bar: "bg-red-600",
-          glow: "bg-red-600/20",
+          text: "text-red-500",
+          icon: "text-red-500",
+          bar: "bg-red-500",
+          glow: "bg-red-500/20", // Color rojo
         };
-
       default:
         return {
           text: "text-gray-400",
           icon: "text-gray-400",
           bar: "bg-gray-400",
-          glow: "bg-transparent",
+          glow: "bg-blue-500/10", // Color por defecto (azul suave)
         };
     }
   };
@@ -265,12 +267,15 @@ export function AnthropometricForm() {
               <div className="flex flex-col gap-2">
                 <InputGroup
                   label="Peso"
-                  type="number"
-                  placeholder="45"
-                  value={weight.toString()}
+                  type="text"
+                  placeholder="0.5-500"
+                  value={weight}
                   handleChange={(e) => {
-                    setWeight(Number(e.target.value));
-                    clearFieldError("weight");
+                    const value = e.target.value.replace(",", ".");
+                    if (/^\d*\.?\d*$/.test(value)) {
+                      setWeight(value);
+                      clearFieldError("weight");
+                    }
                   }}
                   iconPosition="left"
                   icon={
@@ -287,19 +292,22 @@ export function AnthropometricForm() {
               <div className="flex flex-col gap-2">
                 <InputGroup
                   label="Altura"
-                  type="number"
-                  placeholder="120"
-                  value={height.toString()}
+                  type="text"
+                  placeholder="0.3-2.5"
+                  value={height}
                   handleChange={(e) => {
-                    setHeight(Number(e.target.value));
-                    clearFieldError("height");
+                    const value = e.target.value.replace(",", ".");
+                    if (/^\d*\.?\d*$/.test(value)) {
+                      setHeight(value);
+                      clearFieldError("height");
+                    }
                   }}
                   iconPosition="left"
                   icon={
                     <>
                       <TbArrowsVertical size={20} className="text-gray-400" />
                       <span className="absolute right-4.5 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-500">
-                        cm
+                        m
                       </span>
                     </>
                   }
@@ -327,12 +335,15 @@ export function AnthropometricForm() {
                 <div className="relative">
                   <InputGroup
                     label="Perímetro de cintura"
-                    placeholder="30"
-                    type="number"
-                    value={waistPerimeter.toString()}
+                    placeholder="0-200"
+                    type="text"
+                    value={waistPerimeter}
                     handleChange={(e) => {
-                      setWaistPerimeter(Number(e.target.value));
-                      clearFieldError("waistPerimeter");
+                      const value = e.target.value.replace(",", ".");
+                      if (/^\d*\.?\d*$/.test(value)) {
+                        setWaistPerimeter(value);
+                        clearFieldError("waistPerimeter");
+                      }
                     }}
                     iconPosition="left"
                     icon={
@@ -350,13 +361,16 @@ export function AnthropometricForm() {
               <div className="flex flex-col gap-2">
                 <div className="relative">
                   <InputGroup
-                    label="Envergadura"
-                    placeholder="45"
-                    type="number"
-                    value={wingspan.toString()}
+                    label="Perímetro de brazo"
+                    placeholder="0-80"
+                    type="text"
+                    value={armPerimeter}
                     handleChange={(e) => {
-                      setWingspan(Number(e.target.value));
-                      clearFieldError("wingspan");
+                      const value = e.target.value.replace(",", ".");
+                      if (/^\d*\.?\d*$/.test(value)) {
+                        setArmPerimeter(value);
+                        clearFieldError("armPerimeter");
+                      }
                     }}
                     iconPosition="left"
                     icon={
@@ -368,7 +382,61 @@ export function AnthropometricForm() {
                       </>
                     }
                   />
-                  <ErrorMessage message={errors.wingspan} />
+                  <ErrorMessage message={errors.armPerimeter} />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="relative">
+                  <InputGroup
+                    label="Perímetro de pierna"
+                    placeholder="0-120"
+                    type="text"
+                    value={legPerimeter}
+                    handleChange={(e) => {
+                      const value = e.target.value.replace(",", ".");
+                      if (/^\d*\.?\d*$/.test(value)) {
+                        setLegPerimeter(value);
+                        clearFieldError("legPerimeter");
+                      }
+                    }}
+                    iconPosition="left"
+                    icon={
+                      <>
+                        <LuRuler size={20} className="text-gray-400" />
+                        <span className="absolute right-4.5 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-500">
+                          cm
+                        </span>
+                      </>
+                    }
+                  />
+                  <ErrorMessage message={errors.legPerimeter} />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="relative">
+                  <InputGroup
+                    label="Perímetro de pantorrilla"
+                    placeholder="0-70"
+                    type="text"
+                    value={calfPerimeter}
+                    handleChange={(e) => {
+                      const value = e.target.value.replace(",", ".");
+                      if (/^\d*\.?\d*$/.test(value)) {
+                        setCalfPerimeter(value);
+                        clearFieldError("calfPerimeter");
+                      }
+                    }}
+                    iconPosition="left"
+                    icon={
+                      <>
+                        <LuRuler size={20} className="text-gray-400" />
+                        <span className="absolute right-4.5 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-500">
+                          cm
+                        </span>
+                      </>
+                    }
+                  />
+                  <ErrorMessage message={errors.calfPerimeter} />
                 </div>
               </div>
             </div>
@@ -376,7 +444,9 @@ export function AnthropometricForm() {
         </div>
         <div className="flex w-full flex-col gap-6 lg:w-1/3">
           <div className="relative overflow-hidden rounded-2xl border border-blue/20 bg-white/10 p-6 shadow-xl dark:border-white/5 dark:bg-[#1a2233]">
-            <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-red-500/10 blur-3xl"></div>
+            <div
+              className={`absolute -right-10 -top-10 h-32 w-32 rounded-full blur-3xl transition-colors duration-500 ${getBmiColors().glow}`}
+            ></div>
 
             <span className="text-dark-200 text-xs font-bold uppercase tracking-widest dark:text-gray-400">
               Resultado Previsto
@@ -433,53 +503,116 @@ export function AnthropometricForm() {
               </span>
             </p>
           </div>
+          <div className="flex flex-col gap-2">
+            {bmi === null && (
+              <button
+                type="submit"
+                disabled={isSaving}
+                className={`flex w-full items-center justify-center gap-2 rounded-lg p-3 text-white transition-colors ${isSaving ? "cursor-not-allowed bg-primary/70" : "bg-primary hover:bg-opacity-90"}`}
+              >
+                <div className="flex items-center justify-center rounded-lg bg-white/10 p-1.5 group-hover:bg-white/20">
+                  <FiSave size={18} />
+                </div>
+                <span className="text-lg">
+                  {isSaving ? "Guardando..." : "Calcular y Guardar"}
+                </span>
+              </button>
+            )}
 
-          <button
-            type={bmi !== null ? "button" : "submit"}
-            onClick={bmi !== null ? resetForm : undefined}
-            className="mt-2 flex w-full justify-center rounded-lg bg-primary p-[13px] font-medium text-white hover:bg-opacity-90"
-          >
-            <div className="rounded-lg bg-white/10 p-1.5 group-hover:bg-white/20">
-              <FiSave size={18} />
-            </div>
-            <span className="text-lg">
-              {bmi !== null ? "Volver a Calcular" : "Calcular y Guardar"}
-            </span>
-          </button>
+            {bmi !== null && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white/10 p-3 text-gray-700 transition-colors hover:bg-white/20 dark:border-gray-600 dark:bg-gray-700/30 dark:text-gray-300 dark:hover:bg-gray-700/50"
+              >
+                <FiRefreshCcw size={18} />
+                Volver a Calcular
+              </button>
+            )}
+          </div>
         </div>
       </form>
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <input
-          type="text"
-          placeholder="Buscar participante..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="mb-4 w-full rounded border border-gray-300 bg-white px-3 py-2 text-dark focus:outline-none dark:border-gray-600 dark:bg-gray-dark dark:text-white"
-        />
-
-        <ul className="max-h-64 overflow-y-auto">
-          {filteredParticipants.length > 0 ? (
-            filteredParticipants.map((p) => (
-              <li
-                key={p.external_id}
-                className="cursor-pointer border-b border-gray-300 py-2 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
-                onClick={() => {
-                  setSelectedParticipant(
-                    `${p.firstName}${p.lastName ? " " + p.lastName : ""}`,
-                  );
-                  clearFieldError("participant_external_id");
-                  setIsModalOpen(false);
-                }}
+        <div className="flex h-[450px] max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white text-gray-900 shadow-2xl transition-all dark:border-gray-800 dark:bg-[#111827] dark:text-white">
+          <div className="p-6 pb-2">
+            <div className="mb-1 flex items-start justify-between">
+              <div>
+                <h2 className="text-xl font-bold tracking-tight">
+                  Añadir Participantes
+                </h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Busca y selecciona personas para tu equipo.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1 text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-white"
               >
-                {p.firstName} {p.lastName || ""} {p.dni ? `- ${p.dni}` : ""}
-              </li>
-            ))
-          ) : (
-            <li className="py-2 text-gray-500">
-              No se encontraron participantes
-            </li>
-          )}
-        </ul>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="relative mt-4">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400 dark:text-gray-500">
+                <Search size={16} />
+              </span>
+              <input
+                type="text"
+                placeholder="Buscar por nombre o ID..."
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-[#1f2937]/50 dark:focus:ring-blue-600"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="custom-scrollbar flex-1 overflow-y-auto px-4 py-2">
+            {filteredParticipants.length > 0 ? (
+              <div className="space-y-1">
+                {filteredParticipants.map((p) => (
+                  <div
+                    key={p.external_id}
+                    onClick={() => {
+                      const fullName = `${p.firstName}${p.lastName ? " " + p.lastName : ""}`;
+                      setSelectedParticipant(fullName);
+                      clearFieldError("participant_external_id");
+                      setIsModalOpen(false);
+                      setSearch("");
+                    }}
+                    className="flex cursor-pointer items-center gap-4 rounded-xl px-3 py-3 transition-colors hover:bg-gray-100 dark:hover:bg-[#1f2937]"
+                  >
+                    <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-blue-100 bg-blue-50 text-xs font-bold text-blue-600 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-400">
+                      {p.firstName[0]}
+                      {p.lastName?.[0] || ""}
+                    </div>
+
+                    <div className="flex min-w-0 flex-col">
+                      <span className="text-[15px] font-semibold">
+                        {p.firstName} {p.lastName}
+                      </span>
+                      <span className="mt-1 w-fit truncate rounded border border-gray-200 bg-gray-50 px-2 py-0.5 font-mono text-[9px] text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                        {p.dni}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-gray-400 dark:text-gray-500">
+                No se encontraron resultados
+              </div>
+            )}
+          </div>
+          <div className="flex items-center justify-between border-t border-gray-100 bg-gray-50/50 p-6 dark:border-gray-800 dark:bg-[#111827]">
+            <span className="text-xs font-medium text-gray-400 dark:text-gray-500">
+              {filteredParticipants.length} encontrados
+            </span>
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="text-sm font-semibold text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
       </Modal>
     </ShowcaseSection>
   );

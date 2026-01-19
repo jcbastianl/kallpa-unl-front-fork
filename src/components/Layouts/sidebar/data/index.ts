@@ -86,9 +86,9 @@ export const NAV_DATA: NavSection[] = [
         ],
       },
       {
-        title: "Historial",
+        title: "Ver progreso",
         url: "/history/measurements",
-        icon: Icons.HistoryIcon,
+        icon: Icons.ProgressIcon,
         roles: ["PASANTE", "ADMINISTRADOR", "DOCENTE"],
         items: [],
       },

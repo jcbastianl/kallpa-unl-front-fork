@@ -160,7 +160,7 @@ export function TapeMeasureIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
-export function HistoryIcon(props: React.SVGProps<SVGSVGElement>) {
+export function ProgressIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -168,14 +168,16 @@ export function HistoryIcon(props: React.SVGProps<SVGSVGElement>) {
       height={24}
       viewBox="0 0 24 24"
       fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       {...props}
     >
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M12 2.25a9.75 9.75 0 100 19.5 9.75 9.75 0 000-19.5zm0 1.5a8.25 8.25 0 110 16.5 8.25 8.25 0 010-16.5zm-.75 3.5a.75.75 0 011.5 0v5.19l3.22 1.86a.75.75 0 01-.75 1.3l-3.6-2.08a.75.75 0 01-.37-.65V7.25z"
-        fill="currentColor"
-      />
+      <path d="M22 7l-8.5 8.5-5-5L2 17" />
+      <polyline points="16 7 22 7 22 13" />
+      {/* Pesas o base de datos */}
+      <line x1="2" y1="20" x2="22" y2="20" />
     </svg>
   );
 }

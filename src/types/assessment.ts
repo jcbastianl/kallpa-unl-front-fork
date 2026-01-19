@@ -4,7 +4,9 @@ export interface AssessmentData {
   weight: number;
   height: number;
   waistPerimeter: number;
-  wingspan: number;
+  armPerimeter: number;
+  legPerimeter: number;
+  calfPerimeter: number;
 }
 export interface AssessmentResponseData extends AssessmentData {
   bmi: number;
@@ -26,7 +28,9 @@ export interface AssessmentTableData {
   height: number;
   weight: number;
   waistPerimeter: number;
-  wingspan: number;
+  armPerimeter: number;
+  legPerimeter: number;
+  calfPerimeter: number;
 }
 export interface BmiDistributionItem {
   label: string;

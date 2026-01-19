@@ -13,6 +13,7 @@ type PropsType = {
   value?: string;
   onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   placeholder?: string;
+  disabled?: boolean; 
 } & (
     | { placeholder?: string; defaultValue: string }
     | { placeholder: string; defaultValue?: string }
@@ -28,6 +29,7 @@ export function Select({
   className,
   value,
   onChange,
+  disabled, 
 }: PropsType) {
   const id = useId();
 
@@ -53,6 +55,7 @@ export function Select({
           id={id}
           value={value || ""}
           name={name}
+          disabled={disabled}
           onChange={(e) => {
             setIsOptionSelected(true);
             onChange?.(e);
