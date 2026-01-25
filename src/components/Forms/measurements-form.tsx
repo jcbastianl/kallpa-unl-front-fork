@@ -6,8 +6,7 @@ import { CalculatorIcon, Ruler, ScaleIcon } from "lucide-react";
 import { RecordTable } from "../Tables/record-table";
 import PerformanceDashboard from "./history/history";
 import { useState } from "react";
-import { FiArrowDown, FiArrowUp, FiDownload } from "react-icons/fi";
-import { Button } from "../ui-elements/button";
+import { FiArrowDown, FiArrowUp } from "react-icons/fi";
 
 interface Props {
   participant: Participant;
@@ -16,16 +15,25 @@ interface Props {
 export function MeasurementsForm({ participant, measurements }: Props) {
   const [showHistory, setShowHistory] = useState(false);
   const hasMeasurements = measurements.length > 0;
-  const lastMeasurement = hasMeasurements
-    ? measurements[measurements.length - 1]
-    : {
-      height: 0,
-      weight: 0,
-      bmi: 0,
-      waistPerimeter: 0,
-      status: "",
-      date: "",
-    };
+  const sortedMeasurements = [...measurements].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+  const lastMeasurement = hasMeasurements ? sortedMeasurements[0] : null;
+  const previousMeasurement = hasMeasurements && sortedMeasurements.length > 1 ? sortedMeasurements[1] : null;
+  function getTrend(current: number, previous: number | null): { trend?: "up" | "down"; trendValue: string } {
+    if (previous === null) return { trend: undefined, trendValue: "-" };
+
+    const diff = current - previous;
+    const trend: "up" | "down" | undefined = diff > 0 ? "up" : diff < 0 ? "down" : undefined;
+    const trendValue = previous === 0 ? "-" : Math.abs((diff / previous) * 100).toFixed(1) + "%";
+
+    return { trend, trendValue };
+  }
+
+  const weightTrend = getTrend(lastMeasurement?.weight || 0, previousMeasurement?.weight || null);
+  const bmiTrend = getTrend(lastMeasurement?.bmi || 0, previousMeasurement?.bmi || null);
+  const waistTrend = getTrend(lastMeasurement?.waistPerimeter || 0, previousMeasurement?.waistPerimeter || null);
+
   return (
     <>
       {participant && participant.external_id && (
@@ -53,24 +61,14 @@ export function MeasurementsForm({ participant, measurements }: Props) {
                   </span>
                   <span className="h-1 w-1 rounded-full bg-gray-400 opacity-50"></span>
                   <span className="flex items-center gap-1.5">
-                    <span className="text-base opacity-70">⚖️</span> {lastMeasurement.weight || 0} kg
+                    <span className="text-base opacity-70">⚖️</span> {lastMeasurement?.weight || 0} kg
                   </span>
                   <span className="h-1 w-1 rounded-full bg-gray-400 opacity-50"></span>
                   <span className="flex items-center gap-1.5 font-medium text-blue-500">
-                    <span className="text-base opacity-70">🧍</span> {lastMeasurement.height || 0} m
+                    <span className="text-base opacity-70">🧍</span> {lastMeasurement?.height || 0} m
                   </span>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                label="Descargar"
-                icon={<FiDownload size={16} />}
-                variant="outlinePrimary"
-                size="small"
-                shape="rounded"
-                className="w-fit"
-              />
             </div>
           </div>
         </div>
@@ -89,36 +87,46 @@ export function MeasurementsForm({ participant, measurements }: Props) {
             </h2>
           </div>
           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-500">
-            Última actualización: {lastMeasurement.date || "Sin registros"}
+            Última actualización: {lastMeasurement?.date || "Sin registros"}
           </span>
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             title="Peso Actual"
-            value={lastMeasurement.weight.toString()}
+            value={lastMeasurement?.weight?.toString() || "0"}
             unit="kg"
-            trend="down"
-            trendValue="1.2%"
+            trend={weightTrend.trend}
+            trendValue={weightTrend.trendValue}
             trendText="vs mes anterior"
-            icon={<ScaleIcon className="h-5 w-5 opacity-40" />}
+            icon={<ScaleIcon className="h-5 w-5 text-blue-500" />}
           />
           <StatCard
             title="IMC Calculado"
-            value={lastMeasurement.bmi.toString()}
+            value={lastMeasurement?.bmi?.toString() || "0"}
             unit=""
-            badge={lastMeasurement.status}
-            trendText=""
-            icon={<CalculatorIcon className="h-5 w-5 opacity-40" />}
+            trend={bmiTrend.trend}
+            trendValue={bmiTrend.trendValue}
+            trendText="vs mes anterior"
+            icon={<CalculatorIcon className="h-5 w-5 text-blue-500" />}
           />
           <StatCard
             title="Cintura"
-            value={lastMeasurement.waistPerimeter.toString()}
+            value={lastMeasurement?.waistPerimeter?.toString() || "0"}
             unit="cm"
-            trend="up"
-            trendValue="-"
-            trendText="Sin cambios"
-            icon={<Ruler className="h-5 w-5 opacity-40" />}
+            trend={waistTrend.trend}
+            trendValue={waistTrend.trendValue}
+            trendText="vs mes anterior"
+            icon={<Ruler className="h-5 w-5 text-blue-500" />}
+          />
+          <StatCard
+            title="Cintura"
+            value={lastMeasurement?.waistPerimeter?.toString() || "0"}
+            unit="cm"
+            trend={waistTrend.trend}
+            trendValue={waistTrend.trendValue}
+            trendText="vs mes anterior"
+            icon={<Ruler className="h-5 w-5 text-blue-500" />}
           />
         </div>
         <button

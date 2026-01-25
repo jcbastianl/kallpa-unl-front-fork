@@ -71,6 +71,26 @@ export function AssignTest() {
     if (currentStep === 2) return !!selectedParticipant;
     return true;
   };
+  const handleBack = () => {
+    setCurrentStep((prev) => {
+      if (prev === 3) {
+        setSelectedParticipant(null);
+        setValues({});
+        setObservations("");
+        setDate(new Date().toISOString().split("T")[0]);
+        return 2;
+      }
+
+      if (prev === 2) {
+        // Vuelvo de participante → test
+        setSelectedTestId(null);
+        return 1;
+      }
+
+      return prev;
+    });
+  };
+
   return (
     <div className="overflow-hidden rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card">
       {" "}
@@ -169,7 +189,7 @@ export function AssignTest() {
           <div className="flex items-center justify-end gap-3">
             <button
               type="button"
-              onClick={() => setCurrentStep((prev) => Math.max(prev - 1, 1))}
+              onClick={handleBack}
               disabled={currentStep === 1}
               className="rounded-lg border border-slate-300 px-6 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             >
@@ -231,8 +251,8 @@ export function AssignTest() {
                 }
               }}
               className={`flex items-center gap-2 rounded-lg px-8 py-2.5 text-sm font-semibold transition ${canContinue()
-                  ? "bg-primary text-white hover:bg-opacity-90"
-                  : "cursor-not-allowed bg-primary/40 text-white/70"
+                ? "bg-primary text-white hover:bg-opacity-90"
+                : "cursor-not-allowed bg-primary/40 text-white/70"
                 }`}
             >
               {currentStep < 3 ? "Continuar" : "Registrar Test"}

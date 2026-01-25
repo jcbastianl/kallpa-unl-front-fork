@@ -13,18 +13,30 @@ interface StatCardProps {
 }
 
 // 2. Aplicamos la Interface al componente y lo exportamos
-export const StatCard = ({ 
-  title, 
-  value, 
-  unit, 
-  trend, 
-  trendValue, 
-  trendText, 
-  icon, 
-  badge 
+export const StatCard = ({
+  title,
+  value,
+  unit,
+  trend,
+  trendValue,
+  trendText,
+  icon,
+  badge
 }: StatCardProps) => {
-  
-  const isPositive = trend === 'up';
+
+  let trendColor = '';
+  let trendArrow = '';
+
+  if (trend === 'up') {
+    trendColor = 'text-green-500';
+    trendArrow = '↗';
+  } else if (trend === 'down') {
+    trendColor = 'text-red-500';
+    trendArrow = '↘';
+  } else {
+    trendColor = 'text-gray-400';
+    trendArrow = '';
+  }
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-dark-2">
@@ -41,32 +53,29 @@ export const StatCard = ({
             {unit && <span className="text-lg font-medium text-gray-400">{unit}</span>}
           </div>
         </div>
-        
+
         {/* Contenedor del Icono */}
-        <div className="flex h-11.5 w-11.5 items-center justify-center rounded-lg bg-gray-100 dark:bg-white/5 text-gray-400">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10 transition-all duration-300 shadow-sm">
           {icon}
         </div>
       </div>
 
       <div className="mt-4 flex items-center gap-2">
-        {/* Badge opcional (ej. "Normal") */}
         {badge && (
           <span className="rounded bg-meta-3/10 px-2 py-0.5 text-xs font-medium text-meta-3">
             {badge}
           </span>
         )}
 
-        {/* Indicador de tendencia */}
-        {(trendValue || trendText) && (
-          <div className={`flex items-center gap-1 text-sm font-medium ${isPositive ? 'text-blue-500' : 'text-green-500'}`}>
-            {trendValue && (
-               <span>
-                {isPositive ? '↗' : '↘'} {trendValue}
-              </span>
-            )}
-            <span className="text-gray-400 font-normal">{trendText}</span>
-          </div>
-        )}
+        <div className={`flex items-center gap-1 text-sm font-medium ${trendColor}`}>
+          {trendValue && (
+            <span>
+              {trendArrow} {trendValue}
+            </span>
+          )}
+          {trendText && <span className="text-gray-400 font-normal">{trendText}</span>}
+        </div>
+
       </div>
     </div>
   );
