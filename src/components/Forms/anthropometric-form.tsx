@@ -21,6 +21,7 @@ import { TbArrowsVertical, TbScale } from "react-icons/tb";
 import { LuRuler } from "react-icons/lu";
 import { Alert } from "@/components/ui-elements/alert";
 import { Search, X } from "lucide-react";
+import { Button } from "../ui-elements/button";
 
 export function AnthropometricForm() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -234,6 +235,7 @@ export function AnthropometricForm() {
             </div>
             <div className="w-full xl:w-1/2">
               <DatePickerTwo
+                label="Fecha"
                 value={date}
                 onChange={(newDate: string) => {
                   setDate(newDate);
@@ -505,29 +507,28 @@ export function AnthropometricForm() {
           </div>
           <div className="flex flex-col gap-2">
             {bmi === null && (
-              <button
-                type="submit"
-                disabled={isSaving}
-                className={`flex w-full items-center justify-center gap-2 rounded-lg p-3 text-white transition-colors ${isSaving ? "cursor-not-allowed bg-primary/70" : "bg-primary hover:bg-opacity-90"}`}
-              >
-                <div className="flex items-center justify-center rounded-lg bg-white/10 p-1.5 group-hover:bg-white/20">
-                  <FiSave size={18} />
-                </div>
-                <span className="text-lg">
-                  {isSaving ? "Guardando..." : "Calcular y Guardar"}
-                </span>
-              </button>
+              <Button
+                label={isSaving ? "Guardando..." : "Calcular y Guardar"}
+                icon={
+                  <div className="flex items-center justify-center rounded-lg bg-white/10 p-1.5 group-hover:bg-white/20">
+                    <FiSave size={18} />
+                  </div>
+                }
+                variant="primary"
+                size="default"
+                className={isSaving ? "cursor-not-allowed bg-primary/70" : ""}
+                shape="rounded"
+              />
             )}
-
             {bmi !== null && (
-              <button
-                type="button"
+              <Button
                 onClick={resetForm}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white/10 p-3 text-gray-700 transition-colors hover:bg-white/20 dark:border-gray-600 dark:bg-gray-700/30 dark:text-gray-300 dark:hover:bg-gray-700/50"
-              >
-                <FiRefreshCcw size={18} />
-                Volver a Calcular
-              </button>
+                label="Volver a Calcular"
+                icon={<FiRefreshCcw size={18} />}
+                variant="outlineDark"
+                size="default"
+                shape="rounded"
+              />
             )}
           </div>
         </div>

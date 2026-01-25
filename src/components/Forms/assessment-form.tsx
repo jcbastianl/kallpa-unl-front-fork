@@ -57,6 +57,8 @@ export function AssessmentForm({ initialData }: { initialData?: AssessmentInitia
   };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
+    setLoading(true);
 
     const payload: any = {
       name: name.trim(),
@@ -72,53 +74,43 @@ export function AssessmentForm({ initialData }: { initialData?: AssessmentInitia
       payload.frequency_months = Number(frequencyMonths);
     }
 
-    setErrors({});
-
     try {
-      setLoading(true);
       const res = isEditing
         ? await updateTest(payload)
         : await saveTest(payload);
 
-      if (res.status === "ok") {
-        setAlertVariant("success");
-        setAlertMessage({
-          title: isEditing ? "Test actualizado" : "Test creado",
-          description: "Los cambios se guardaron correctamente",
-        });
-        setShowAlert(true);
-        setTimeout(() => {
-          router.push("/evolution/list-test");
-        }, 1000);
-      } else {
-        if (res.msg && typeof res.msg === "object") {
+      if (res.status === "error") {
+        throw { response: { data: res } };
+      }
+
+      setAlertVariant("success");
+      setAlertMessage({
+        title: isEditing ? "Test actualizado" : "Test creado",
+        description: "Los cambios se guardaron correctamente",
+      });
+      setShowAlert(true);
+      setTimeout(() => router.push("/evolution/list-test"), 1000);
+    } catch (err: any) {
+      const response = err.response?.data;
+      if (response && response.status === "error") {
+        const errorSource = response.data?.validation_errors || response.data;
+
+        if (errorSource && typeof errorSource === "object") {
           const fieldErrors: Record<string, string> = {};
-          Object.entries(res.msg).forEach(([key, value]) => {
+          Object.entries(errorSource).forEach(([key, value]) => {
             if (typeof value === "string") {
               fieldErrors[key] = value;
-            } else if (Array.isArray(value)) {
-              fieldErrors[key] = "Algunos ejercicios son inválidos";
             }
           });
           setErrors(fieldErrors);
-        } else {
-          setAlertVariant("error");
-          setAlertMessage({
-            title: "Error",
-            description:
-              typeof res.msg === "string"
-                ? res.msg
-                : "Error al guardar el test",
-          });
-          setShowAlert(true);
-          setTimeout(() => setShowAlert(false), 3000);
+          setLoading(false);
+          return;
         }
       }
-    } catch (err) {
       setAlertVariant("error");
       setAlertMessage({
         title: "Error",
-        description: "Error al guardar el test",
+        description: err.response?.data?.msg || "Error al guardar el test",
       });
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 3000);
