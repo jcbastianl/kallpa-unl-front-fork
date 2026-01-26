@@ -7,6 +7,7 @@ import { FiSave, FiUserPlus, FiUsers } from "react-icons/fi";
 import { Alert } from "@/components/ui-elements/alert";
 import ErrorMessage from "../FormElements/errormessage";
 import { ShowcaseSection } from "../Layouts/showcase-section";
+import { Button } from "@/components/ui-elements/button";
 
 export const RegisterParticipantForm = () => {
   const [loading, setLoading] = useState(false);
@@ -338,20 +339,14 @@ export const RegisterParticipantForm = () => {
           </div>
         </div>
 
-        <button
+        <Button
           type="submit"
           disabled={loading}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-primary p-[13px] font-bold text-white hover:bg-opacity-90"
-        >
-          {loading ? (
-            "Guardando..."
-          ) : (
-            <>
-              <FiSave className="h-5 w-5" />
-              Registrar Participante
-            </>
-          )}
-        </button>
+          label={loading ? "Guardando..." : "Registrar Participante"}
+          icon={!loading ? <FiSave size={20} /> : undefined}
+          variant="primary"
+          className="mt-6 w-full"
+        />
       </form>
     </ShowcaseSection>
   );
