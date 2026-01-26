@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { attendanceService } from '@/services/attendance.services';
 import type { Schedule, Participant, Program } from '@/types/attendance';
 import { Alert } from '@/components/ui-elements/alert';
+import { Button } from '@/components/ui-elements/button';
 
 function Loading() {
   return (
@@ -79,7 +80,7 @@ export default function Registro() {
   useEffect(() => {
     const sessionParam = searchParams.get('session');
     const dateParam = searchParams.get('date');
-    
+
     // Solo cargar asistencia si hay participantes y el estado de attendance está vacío
     if (participants.length > 0 && Object.keys(attendance).length === 0) {
       if (sessionParam && dateParam) {
@@ -105,25 +106,25 @@ export default function Registro() {
       if (allRecords.length > 0) {
         setIsEditing(true);
         const existingAttendance: Record<string, string> = {};
-        
+
         allRecords.forEach((r: any) => {
           // Normalizar el ID del participante
           const participantId = r.participant?.external_id || r.participant?.id || r.participant_id || r.participantId;
           // Normalizar el estado (convertir a mayúsculas)
           const status = (r.status || r.attendance_status || 'present').toUpperCase();
-          
+
           if (participantId) {
             existingAttendance[participantId] = status;
           }
         });
-        
+
         // Para participantes que no tienen registro, usar PRESENT por defecto
         participants.forEach(p => {
           if (!existingAttendance[p.id]) {
             existingAttendance[p.id] = 'PRESENT';
           }
         });
-        
+
         setAttendance(existingAttendance);
       } else {
         const initial: Record<string, string> = {};
@@ -399,20 +400,22 @@ export default function Registro() {
               )}
             </div>
             <div className="flex gap-2 flex-wrap">
-              <button
-                type="button"
+              <Button
+                label={refreshing ? 'Actualizando...' : 'Actualizar'}
+                variant="outlinePrimary"
+                shape="rounded"
+                size="small"
                 onClick={refreshParticipants}
-                disabled={refreshing}
-                className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors disabled:opacity-50 flex items-center gap-1"
-                title="Actualizar lista de participantes"
-              >
-                <span className={`material-symbols-outlined text-base ${refreshing ? 'animate-spin' : ''}`}>refresh</span>
-                {refreshing ? 'Actualizando...' : 'Actualizar'}
-              </button>
-              <button type="button" onClick={() => markAll('PRESENT')} className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors">
-                Todos Presentes
-              </button>
-              <button type="button" onClick={() => markAll('ABSENT')} className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors">
+                icon={<span className={`material-symbols-outlined text-base ${refreshing ? 'animate-spin' : ''}`}>refresh</span>}
+              />
+              <Button
+                label="Todos Presentes"
+                variant="outlineGreen"
+                shape="rounded"
+                size="small"
+                onClick={() => markAll('PRESENT')}
+              />
+              <button type="button" onClick={() => markAll('ABSENT')} className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors border border-red-200">
                 Todos Ausentes
               </button>
             </div>
@@ -457,23 +460,13 @@ export default function Registro() {
 
           {/* Submit Button */}
           <div className="p-6 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-            <button
-              type="submit"
-              disabled={saving || !selectedSchedule}
-              className="w-full sm:w-auto px-8 py-3 bg-blue-800 text-white rounded-lg font-medium hover:bg-blue-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {saving ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined">save</span>
-                  Guardar Asistencia
-                </>
-              )}
-            </button>
+            <Button
+              label={saving ? "Guardando..." : "Guardar Asistencia"}
+              variant="primary"
+              shape="rounded"
+              className="w-full sm:w-auto !bg-blue-800 hover:!bg-blue-900"
+              icon={saving ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : <span className="material-symbols-outlined">save</span>}
+            />
           </div>
         </div>
       </form>
