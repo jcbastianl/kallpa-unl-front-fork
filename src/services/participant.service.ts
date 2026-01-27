@@ -1,4 +1,4 @@
-import { Participant } from "@/types/participant";
+import { Participant, UpdateParticipantData } from "@/types/participant";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -250,5 +250,16 @@ export const participantService = {
     }
 
     return result.data;
+  },
+
+  async updateParticipant(externalId: string, data: UpdateParticipantData) {
+    const response = await fetch(`${API_URL}/participants/${externalId}`, {
+      method: "PUT",
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    return result;
   }
 };

@@ -6,6 +6,7 @@ import { Participant } from "@/types/participant";
 import { participantService } from "@/services/participant.service";
 import { useMemo, useState, useCallback } from "react";
 import { FiChevronDown, FiFilter, FiSearch } from "react-icons/fi";
+import { EditParticipantModal } from "@/components/Forms/edit-participant-modal";
 
 interface ParticipantsTableProps {
   data: Participant[];
@@ -17,6 +18,8 @@ export function ParticipantsTable({ data, onStatusChange }: ParticipantsTablePro
   const [statusFilter, setStatusFilter] = useState("TODOS");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
   const statusOptions = ["TODOS", "ACTIVO", "INACTIVO"];
 
   const handleToggleStatus = useCallback(async (participant: Participant) => {
@@ -38,9 +41,20 @@ export function ParticipantsTable({ data, onStatusChange }: ParticipantsTablePro
     }
   }, [onStatusChange]);
 
+  const handleEdit = useCallback((participant: Participant) => {
+    setSelectedParticipant(participant);
+    setIsEditModalOpen(true);
+  }, []);
+
+  const handleEditSuccess = useCallback(async () => {
+    if (onStatusChange) {
+      await onStatusChange();
+    }
+  }, [onStatusChange]);
+
   const columns = useMemo(
-    () => getParticipantColumns({ onToggleStatus: handleToggleStatus, loadingId }),
-    [handleToggleStatus, loadingId]
+    () => getParticipantColumns({ onToggleStatus: handleToggleStatus, onEdit: handleEdit, loadingId }),
+    [handleToggleStatus, handleEdit, loadingId]
   );
 
   const filteredData = useMemo(() => {
@@ -123,6 +137,13 @@ export function ParticipantsTable({ data, onStatusChange }: ParticipantsTablePro
           rowKey={(p) => String(p.id)}
         />
       )}
+
+      <EditParticipantModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        participant={selectedParticipant}
+        onSuccess={handleEditSuccess}
+      />
     </div>
   );
 }

@@ -59,3 +59,13 @@ export interface SelectedParticipant {
   dni?: string;
   age?: number;
 }
+
+export interface UpdateParticipantData {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  address: string;
+  age: number;
+  dni: string;
+}
