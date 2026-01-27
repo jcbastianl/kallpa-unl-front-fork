@@ -95,7 +95,17 @@ export function EditParticipantModal({
                 setShowAlert(true);
                 setTimeout(() => setShowAlert(false), 3000);
             }
-        } catch (error) {
+        } catch (error: any) {
+            if (error.response) {
+                const { data } = error.response;
+                if (data && data.errors) {
+                    setErrors(data.errors);
+                }
+            } else if (error.request) {
+                console.log("No se pudo conectar al servidor");
+            } else {
+                console.log("Error desconocido:", error.message);
+            }
             setAlertType("error");
             setAlertMessage("Error al actualizar el participante");
             setShowAlert(true);
@@ -263,8 +273,9 @@ export function EditParticipantModal({
                         Cancelar
                     </button>
                     <Button
+                        type="button"
                         label={isSaving ? "Guardando..." : "Guardar Cambios"}
-                        icon={<FiSave size={18} />}
+                        icon={!isSaving ? <FiSave size={18} /> : undefined}
                         variant="primary"
                         size="small"
                         shape="rounded"

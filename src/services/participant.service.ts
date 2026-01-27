@@ -260,6 +260,11 @@ export const participantService = {
     });
 
     const result = await response.json();
+
+    if (!response.ok && response.status !== 400) {
+      throw new Error(result.msg || "Error al actualizar participante");
+    }
+
     return result;
   }
 };
