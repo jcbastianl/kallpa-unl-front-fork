@@ -7,6 +7,9 @@ import { attendanceService } from '@/services/attendance.services';
 import type { Schedule, Program } from '@/types/attendance';
 import { Alert } from '@/components/ui-elements/alert';
 import ErrorMessage from '@/components/FormElements/errormessage';
+import { Button } from '@/components/ui-elements/button';
+import { Select } from '@/components/FormElements/select';
+import InputGroup from '@/components/FormElements/InputGroup';
 
 const DAYS_OF_WEEK = [
   { value: 'monday', label: 'Lunes' },
@@ -150,7 +153,7 @@ export default function Programar() {
       ...prev,
       [name]: value
     }));
-    
+
     // Validar que end_date coincida con el día de la semana seleccionado
     if (name === 'end_date' && value && formData.day_of_week) {
       const selectedDate = new Date(value + 'T00:00:00');
@@ -160,7 +163,7 @@ export default function Programar() {
       };
       const expectedDay = dayOfWeekMap[formData.day_of_week];
       const actualDay = selectedDate.getDay();
-      
+
       if (expectedDay !== actualDay) {
         const dayNames: Record<string, string> = {
           'monday': 'lunes', 'tuesday': 'martes', 'wednesday': 'miércoles',
@@ -173,7 +176,7 @@ export default function Programar() {
         return;
       }
     }
-    
+
     clearFieldError(name);
   };
 
@@ -259,7 +262,7 @@ export default function Programar() {
         'Sesión creada exitosamente',
         'La sesión se ha programado correctamente en el calendario.'
       );
-      
+
       // Limpiar formulario
       setFormData({
         name: '',
@@ -274,7 +277,7 @@ export default function Programar() {
         end_date: '',
         specific_date: ''
       });
-      
+
       // Recargar horarios
       loadData();
     } catch (error: any) {
@@ -341,32 +344,28 @@ export default function Programar() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre de la sesión *</label>
-              <input
+              <InputGroup
+                label="Nombre de la sesión"
                 type="text"
                 name="name"
                 value={formData.name}
-                onChange={handleChange}
+                handleChange={handleChange}
                 placeholder="Ej: Yoga Matutino"
-                className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                required
               />
               <ErrorMessage message={errors.name} />
             </div>
 
             {/* Program Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Programa *</label>
-              <select
+              <Select
+                label="Programa"
                 name="program"
+                placeholder="Seleccionar programa..."
                 value={formData.program}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-              >
-                <option value="">Seleccionar programa...</option>
-                {PROGRAM_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+                items={PROGRAM_OPTIONS}
+              />
               <ErrorMessage message={errors.program} />
             </div>
 
@@ -403,18 +402,14 @@ export default function Programar() {
             {sessionType === 'recurring' ? (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Día de la semana *</label>
-                  <select
+                  <Select
+                    label="Día de la semana"
                     name="day_of_week"
+                    placeholder="Seleccionar día..."
                     value={formData.day_of_week}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                  >
-                    <option value="">Seleccionar día...</option>
-                    {DAYS_OF_WEEK.map(d => (
-                      <option key={d.value} value={d.value}>{d.label}</option>
-                    ))}
-                  </select>
+                    items={DAYS_OF_WEEK}
+                  />
                   <ErrorMessage message={errors.day_of_week} />
                 </div>
                 <div>
@@ -452,71 +447,52 @@ export default function Programar() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Hora inicio *</label>
-                <select
+                <Select
+                  label="Hora inicio"
                   name="start_time"
+                  placeholder="Seleccionar hora"
                   value={formData.start_time}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                >
-                  <option value="">Seleccionar hora</option>
-                  {Array.from({ length: 24 }, (_, i) => {
-                    const hour = i; // 00:00 - 23:00
-                    return (
-                      <option key={hour} value={`${hour.toString().padStart(2, '0')}:00`}>
-                        {`${hour.toString().padStart(2, '0')}:00`}
-                      </option>
-                    );
-                  })}
-                </select>
+                  items={Array.from({ length: 24 }, (_, i) => ({
+                    value: `${i.toString().padStart(2, '0')}:00`,
+                    label: `${i.toString().padStart(2, '0')}:00`
+                  }))}
+                />
                 <ErrorMessage message={errors.start_time} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Hora fin *</label>
-                <select
+                <Select
+                  label="Hora fin"
                   name="end_time"
+                  placeholder="Seleccionar hora"
                   value={formData.end_time}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                >
-                  <option value="">Seleccionar hora</option>
-                  {Array.from({ length: 24 }, (_, i) => {
-                    const hour = i; // 00:00 - 23:00
-                    return (
-                      <option key={hour} value={`${hour.toString().padStart(2, '0')}:00`}>
-                        {`${hour.toString().padStart(2, '0')}:00`}
-                      </option>
-                    );
-                  })}
-                </select>
+                  items={Array.from({ length: 24 }, (_, i) => ({
+                    value: `${i.toString().padStart(2, '0')}:00`,
+                    label: `${i.toString().padStart(2, '0')}:00`
+                  }))}
+                />
                 <ErrorMessage message={errors.end_time} />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ubicación</label>
-              <input
-                type="text"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                placeholder="Ej: Gimnasio principal"
-                className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-              />
-            </div>
+            <InputGroup
+              label="Ubicación"
+              type="text"
+              name="location"
+              value={formData.location}
+              handleChange={handleChange}
+              placeholder="Ej: Gimnasio principal"
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Capacidad</label>
-              <input
-                type="number"
-                name="capacity"
-                value={formData.capacity}
-                onChange={handleChange}
-                min="1"
-                max="100"
-                className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-              />
-            </div>
+            <InputGroup
+              label="Capacidad"
+              type="number"
+              name="capacity"
+              value={String(formData.capacity)}
+              handleChange={handleChange}
+              placeholder="30"
+            />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción</label>
@@ -530,23 +506,13 @@ export default function Programar() {
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={saving}
-              className="w-full py-3 bg-blue-800 text-white rounded-lg font-medium hover:bg-blue-900 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {saving ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined">save</span>
-                  Crear Sesión
-                </>
-              )}
-            </button>
+            <Button
+              label={saving ? "Guardando..." : "Crear Sesión"}
+              variant="primary"
+              shape="rounded"
+              className="w-full !bg-blue-800 hover:!bg-blue-900"
+              icon={saving ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : <span className="material-symbols-outlined">save</span>}
+            />
           </form>
         </div>
 

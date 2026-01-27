@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { attendanceService } from '@/services/attendance.services';
 import type { Schedule } from '@/types/attendance';
 import { Alert } from '@/components/ui-elements/alert';
+import { Button } from '@/components/ui-elements/button';
+import InputGroup from '@/components/FormElements/InputGroup';
 
 function Loading() {
   return (
@@ -24,7 +26,7 @@ export default function Sesiones() {
   const [alertTitle, setAlertTitle] = useState('');
   const [alertDescription, setAlertDescription] = useState('');
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-  const [sessionToDelete, setSessionToDelete] = useState<{id: string | number, name: string} | null>(null);
+  const [sessionToDelete, setSessionToDelete] = useState<{ id: string | number, name: string } | null>(null);
 
   const daysOrder = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
 
@@ -311,14 +313,20 @@ export default function Sesiones() {
               </div>
             </div>
             <form onSubmit={handleSaveEdit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre</label>
-                <input type="text" name="name" defaultValue={editingSession.name || ''} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Programa</label>
-                <input type="text" defaultValue={editingSession.program || ''} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700" disabled />
-              </div>
+              <InputGroup
+                label="Nombre"
+                type="text"
+                name="name"
+                defaultValue={editingSession.name || ''}
+                placeholder="Nombre de la sesión"
+              />
+              <InputGroup
+                label="Programa"
+                type="text"
+                defaultValue={editingSession.program || ''}
+                placeholder="Programa"
+                disabled
+              />
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hora inicio</label>
@@ -329,13 +337,29 @@ export default function Sesiones() {
                   <input type="time" name="end_time" defaultValue={editingSession.end_time || ''} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white" />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ubicación</label>
-                <input type="text" name="location" defaultValue={editingSession.location || ''} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white" />
-              </div>
+              <InputGroup
+                label="Ubicación"
+                type="text"
+                name="location"
+                defaultValue={editingSession.location || ''}
+                placeholder="Ubicación"
+              />
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setEditingSession(null)} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium">Cancelar</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 font-medium">Guardar</button>
+                <Button
+                  label="Cancelar"
+                  variant="outlineDark"
+                  shape="rounded"
+                  size="small"
+                  onClick={() => setEditingSession(null)}
+                  className="flex-1"
+                />
+                <Button
+                  label="Guardar"
+                  variant="primary"
+                  shape="rounded"
+                  size="small"
+                  className="flex-1 !bg-blue-800 hover:!bg-blue-900"
+                />
               </div>
             </form>
           </div>
@@ -359,23 +383,25 @@ export default function Sesiones() {
               ¿Estás seguro de eliminar la sesión <strong>"{sessionToDelete.name}"</strong>?
             </p>
             <div className="flex gap-3">
-              <button
-                type="button"
+              <Button
+                label="Cancelar"
+                variant="outlineDark"
+                shape="rounded"
+                size="small"
                 onClick={() => {
                   setShowConfirmDelete(false);
                   setSessionToDelete(null);
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
+                className="flex-1"
+              />
+              <Button
+                label="Eliminar"
+                variant="primary"
+                shape="rounded"
+                size="small"
                 onClick={confirmDelete}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
-              >
-                Eliminar
-              </button>
+                className="flex-1 !bg-red-600 hover:!bg-red-700"
+              />
             </div>
           </div>
         </div>

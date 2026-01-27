@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { attendanceService } from '@/services/attendance.services';
 import type { Schedule, HistoryRecord, SessionDetail } from '@/types/attendance';
 import { Alert } from '@/components/ui-elements/alert';
+import { Button } from '@/components/ui-elements/button';
+import { Select } from '@/components/FormElements/select';
 
 function StatCard({ icon, iconBg, label, value }: { icon: string; iconBg: string; label: string; value: string | number }) {
   return (
@@ -41,7 +43,7 @@ export default function Historial() {
   const [alertTitle, setAlertTitle] = useState('');
   const [alertDescription, setAlertDescription] = useState('');
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-  const [attendanceToDelete, setAttendanceToDelete] = useState<{scheduleId: string, date: string, name: string} | null>(null);
+  const [attendanceToDelete, setAttendanceToDelete] = useState<{ scheduleId: string, date: string, name: string } | null>(null);
 
   const [dateFrom, setDateFrom] = useState(() => {
     const d = new Date();
@@ -349,17 +351,22 @@ export default function Historial() {
             <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white" />
           </div>
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Día</label>
-            <select value={filterDay} onChange={(e) => setFilterDay(e.target.value)} className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white">
-              <option value="Todos los días">Todos los días</option>
-              <option value="Lunes">Lunes</option>
-              <option value="Martes">Martes</option>
-              <option value="Miércoles">Miércoles</option>
-              <option value="Jueves">Jueves</option>
-              <option value="Viernes">Viernes</option>
-              <option value="Sábado">Sábado</option>
-              <option value="Domingo">Domingo</option>
-            </select>
+            <Select
+              label="Día"
+              value={filterDay}
+              onChange={(e) => setFilterDay(e.target.value)}
+              defaultValue="Todos los días"
+              items={[
+                { value: 'Todos los días', label: 'Todos los días' },
+                { value: 'Lunes', label: 'Lunes' },
+                { value: 'Martes', label: 'Martes' },
+                { value: 'Miércoles', label: 'Miércoles' },
+                { value: 'Jueves', label: 'Jueves' },
+                { value: 'Viernes', label: 'Viernes' },
+                { value: 'Sábado', label: 'Sábado' },
+                { value: 'Domingo', label: 'Domingo' },
+              ]}
+            />
           </div>
         </div>
       </div>
@@ -487,23 +494,25 @@ export default function Historial() {
               ¿Estás seguro de eliminar la asistencia de <strong>"{attendanceToDelete.name}"</strong> del {attendanceToDelete.date}?
             </p>
             <div className="flex gap-3">
-              <button
-                type="button"
+              <Button
+                label="Cancelar"
+                variant="outlineDark"
+                shape="rounded"
+                size="small"
                 onClick={() => {
                   setShowConfirmDelete(false);
                   setAttendanceToDelete(null);
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
+                className="flex-1"
+              />
+              <Button
+                label="Eliminar"
+                variant="primary"
+                shape="rounded"
+                size="small"
                 onClick={confirmDelete}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
-              >
-                Eliminar
-              </button>
+                className="flex-1 !bg-red-600 hover:!bg-red-700"
+              />
             </div>
           </div>
         </div>

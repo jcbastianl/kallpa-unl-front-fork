@@ -6,6 +6,9 @@ import { attendanceService } from '@/services/attendance.services';
 import type { Session, Participant, Schedule, Program } from '@/types/attendance';
 import { Alert } from '@/components/ui-elements/alert';
 import ErrorMessage from '@/components/FormElements/errormessage';
+import { Button } from '@/components/ui-elements/button';
+import { Select } from '@/components/FormElements/select';
+import InputGroup from '@/components/FormElements/InputGroup';
 
 function StatCard({ icon, iconBg, label, value }: { icon: string; iconBg: string; label: string; value: string | number }) {
   return (
@@ -46,7 +49,7 @@ export default function DashboardAsistencia() {
   const [alertTitle, setAlertTitle] = useState('');
   const [alertDescription, setAlertDescription] = useState('');
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-  const [sessionToDelete, setSessionToDelete] = useState<{id: string | number, name: string} | null>(null);
+  const [sessionToDelete, setSessionToDelete] = useState<{ id: string | number, name: string } | null>(null);
   const [editEndDateError, setEditEndDateError] = useState<string>('');
   const PROGRAM_COLORS = [
     { value: '#3B82F6', label: 'Azul' },
@@ -372,7 +375,7 @@ export default function DashboardAsistencia() {
     if (dayValue && endDate && !formData.get('specific_date')) {
       const endDateObj = new Date(endDate + 'T12:00:00');
       const dayOfWeek = endDateObj.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
-      
+
       const dayMapping: Record<string, number> = {
         'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6, 'sunday': 0,
         'lunes': 1, 'martes': 2, 'miercoles': 3, 'miércoles': 3, 'jueves': 4, 'viernes': 5, 'sabado': 6, 'sábado': 6, 'domingo': 0
@@ -385,7 +388,7 @@ export default function DashboardAsistencia() {
         return;
       }
     }
-    
+
     setEditEndDateError('');
 
     const data = {
@@ -514,7 +517,7 @@ export default function DashboardAsistencia() {
 
                 // Si hay registros, la sesión está completada
                 const isCompleted = historyRecords.length > 0;
-                
+
                 // Contar presentes y total
                 const presentCount = historyRecords.filter((h: any) => h.status === 'present').length;
                 const totalCount = historyRecords.length;
@@ -532,16 +535,14 @@ export default function DashboardAsistencia() {
                 return (
                   <div
                     key={scheduleId}
-                    className={`relative rounded-lg transition-all duration-300 overflow-hidden ${
-                      isCompleted
-                        ? 'bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border border-emerald-300 dark:border-emerald-700'
-                        : 'bg-white dark:bg-gray-dark border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600'
-                    }`}
+                    className={`relative rounded-lg transition-all duration-300 overflow-hidden ${isCompleted
+                      ? 'bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border border-emerald-300 dark:border-emerald-700'
+                      : 'bg-white dark:bg-gray-dark border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600'
+                      }`}
                   >
                     {/* Barra superior de color */}
-                    <div className={`h-1 w-full ${
-                      isCompleted ? 'bg-emerald-500' : 'bg-blue-500'
-                    }`}></div>
+                    <div className={`h-1 w-full ${isCompleted ? 'bg-emerald-500' : 'bg-blue-500'
+                      }`}></div>
 
                     <div className="p-4">
                       {/* Header con título y badge */}
@@ -555,11 +556,10 @@ export default function DashboardAsistencia() {
                             </div>
                           )}
                         </div>
-                        <span className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
-                          isCompleted
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                        }`}>
+                        <span className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${isCompleted
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                          : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          }`}>
                           <span className="text-sm">
                             {isCompleted ? '✓' : '⌛'}
                           </span>
@@ -591,11 +591,10 @@ export default function DashboardAsistencia() {
                       {scheduleId ? (
                         <Link
                           href={`/pages/attendance/registro?session=${scheduleId}&date=${currentDate.toISOString().split('T')[0]}`}
-                          className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                            isCompleted
-                              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                              : 'bg-blue-600 text-white hover:bg-blue-700'
-                          }`}
+                          className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-colors ${isCompleted
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                            }`}
                         >
                           <span className="text-base">{isCompleted ? '✏️' : '✅'}</span>
                           {isCompleted ? 'Editar Asistencia' : 'Registrar Asistencia'}
@@ -729,32 +728,23 @@ export default function DashboardAsistencia() {
               </div>
             </div>
             <form onSubmit={handleSaveEdit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre de la sesión</label>
-                <input
-                  type="text"
-                  name="name"
-                  defaultValue={editingSession.name || ''}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                />
-              </div>
+              <InputGroup
+                label="Nombre de la sesión"
+                type="text"
+                name="name"
+                defaultValue={editingSession.name || ''}
+                placeholder="Nombre de la sesión"
+                required
+              />
 
               {/* Program Field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Programa</label>
-                <select
-                  name="program"
-                  defaultValue={editingSession.program || ''}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                >
-                  <option value="">Seleccionar programa...</option>
-                  {PROGRAM_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="Programa"
+                name="program"
+                placeholder="Seleccionar programa..."
+                defaultValue={editingSession.program || ''}
+                items={PROGRAM_OPTIONS}
+              />
 
               {/* Mostrar campo según tipo de sesión */}
               {editingSession.is_recurring === false || editingSession.specific_date ? (
@@ -774,24 +764,20 @@ export default function DashboardAsistencia() {
               ) : (
                 // Sesión recurrente - mostrar selector de día y rango de fechas
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Día de la semana</label>
-                    <select
-                      name="day_of_week"
-                      defaultValue={editingSession.day_of_week || ''}
-                      onChange={() => setEditEndDateError('')}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                    >
-                      <option value="monday">Lunes</option>
-                      <option value="tuesday">Martes</option>
-                      <option value="wednesday">Miércoles</option>
-                      <option value="thursday">Jueves</option>
-                      <option value="friday">Viernes</option>
-                      <option value="saturday">Sábado</option>
-                      <option value="sunday">Domingo</option>
-                    </select>
-                  </div>
+                  <Select
+                    label="Día de la semana"
+                    name="day_of_week"
+                    defaultValue={editingSession.day_of_week || 'monday'}
+                    items={[
+                      { value: 'monday', label: 'Lunes' },
+                      { value: 'tuesday', label: 'Martes' },
+                      { value: 'wednesday', label: 'Miércoles' },
+                      { value: 'thursday', label: 'Jueves' },
+                      { value: 'friday', label: 'Viernes' },
+                      { value: 'saturday', label: 'Sábado' },
+                      { value: 'sunday', label: 'Domingo' },
+                    ]}
+                  />
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha fin (opcional)</label>
                     <input
@@ -809,63 +795,50 @@ export default function DashboardAsistencia() {
               )}
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hora inicio</label>
-                  <select
-                    name="start_time"
-                    defaultValue={editingSession.start_time || ''}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                  >
-                    <option value="">Seleccionar hora</option>
-                    {Array.from({ length: 24 }, (_, i) => (
-                      <option key={i} value={`${i.toString().padStart(2, '0')}:00`}>
-                        {`${i.toString().padStart(2, '0')}:00`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hora fin</label>
-                  <select
-                    name="end_time"
-                    defaultValue={editingSession.end_time || ''}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                  >
-                    <option value="">Seleccionar hora</option>
-                    {Array.from({ length: 24 }, (_, i) => (
-                      <option key={i} value={`${i.toString().padStart(2, '0')}:00`}>
-                        {`${i.toString().padStart(2, '0')}:00`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ubicación</label>
-                <input
-                  type="text"
-                  name="location"
-                  defaultValue={editingSession.location || ''}
-                  placeholder="Ej: Gimnasio principal"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                <Select
+                  label="Hora inicio"
+                  name="start_time"
+                  placeholder="Seleccionar hora"
+                  defaultValue={editingSession.start_time || ''}
+                  items={Array.from({ length: 24 }, (_, i) => ({
+                    value: `${i.toString().padStart(2, '0')}:00`,
+                    label: `${i.toString().padStart(2, '0')}:00`
+                  }))}
+                />
+                <Select
+                  label="Hora fin"
+                  name="end_time"
+                  placeholder="Seleccionar hora"
+                  defaultValue={editingSession.end_time || ''}
+                  items={Array.from({ length: 24 }, (_, i) => ({
+                    value: `${i.toString().padStart(2, '0')}:00`,
+                    label: `${i.toString().padStart(2, '0')}:00`
+                  }))}
                 />
               </div>
+              <InputGroup
+                label="Ubicación"
+                type="text"
+                name="location"
+                defaultValue={editingSession.location || ''}
+                placeholder="Ej: Gimnasio principal"
+              />
               <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
+                <Button
+                  label="Cancelar"
+                  variant="outlineDark"
+                  shape="rounded"
+                  size="small"
                   onClick={() => setEditingSession(null)}
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 font-medium"
-                >
-                  Guardar Cambios
-                </button>
+                  className="flex-1"
+                />
+                <Button
+                  label="Guardar Cambios"
+                  variant="primary"
+                  shape="rounded"
+                  size="small"
+                  className="flex-1 !bg-blue-800 hover:!bg-blue-900"
+                />
               </div>
             </form>
           </div>
@@ -889,23 +862,25 @@ export default function DashboardAsistencia() {
               ¿Estás seguro de eliminar la sesión <strong>"{sessionToDelete.name}"</strong>?
             </p>
             <div className="flex gap-3">
-              <button
-                type="button"
+              <Button
+                label="Cancelar"
+                variant="outlineDark"
+                shape="rounded"
+                size="small"
                 onClick={() => {
                   setShowConfirmDelete(false);
                   setSessionToDelete(null);
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
+                className="flex-1"
+              />
+              <Button
+                label="Eliminar"
+                variant="primary"
+                shape="rounded"
+                size="small"
                 onClick={confirmDelete}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
-              >
-                Eliminar
-              </button>
+                className="flex-1 !bg-red-600 hover:!bg-red-700"
+              />
             </div>
           </div>
         </div>
