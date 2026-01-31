@@ -25,6 +25,7 @@ export interface Participant {
   status?: string;
   age?: number;
   program?: ProgramType;
+  responsible?: Responsible;
 }
 
 export interface CreateParticipantRequest {
@@ -60,12 +61,21 @@ export interface SelectedParticipant {
   age?: number;
 }
 
-export interface UpdateParticipantData {
-  firstName: string;
-  lastName: string;
-  phone: string;
-  email: string;
-  address: string;
-  age: number;
+export interface Responsible {
+  name: string;
   dni: string;
+  phone: string;
+}
+
+export interface UpdateParticipantData {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  age?: number;
+  dni?: string;
+  type?: ParticipantType;
+  program?: ProgramType;
+  responsible?: Responsible;
 }

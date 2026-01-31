@@ -109,8 +109,54 @@ export const participantService = {
     return null;
   },
 
+  /**
+   * Obtiene un participante por su ID externo.
+   * Intenta obtener datos completos (incluyendo responsable) desde /participants/:id.
+   * Si falla, hace fallback a /users para obtener datos básicos.
+   */
   async getById(externalId: string): Promise<Participant | null> {
-    // No hay endpoint individual, obtenemos todos y filtramos
+    // Usar el endpoint específico de participantes que incluye datos del responsable
+    try {
+      const response = await fetch(`${API_URL}/participants/${externalId}`, {
+        method: "GET",
+        headers: this.getHeaders(),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const data = result.data || result;
+
+        if (data) {
+          // La API puede devolver estructura plana o anidada {participant: {...}, responsible: {...}}
+          const participantData = data.participant || data;
+          const responsibleData = data.responsible;
+
+          return {
+            id: participantData.external_id || externalId,
+            firstName: participantData.firstName || participantData.first_name || "",
+            lastName: participantData.lastName || participantData.last_name || "",
+            dni: participantData.dni || "",
+            email: participantData.email || "",
+            phone: participantData.phone || participantData.phono || "",
+            address: participantData.address || participantData.direction || "",
+            age: participantData.age || 0,
+            type: participantData.type || participantData.type_stament || "PARTICIPANTE",
+            program: participantData.program || undefined,
+            role: participantData.role || "USER",
+            status: participantData.status || "ACTIVO",
+            responsible: responsibleData ? {
+              name: responsibleData.name || "",
+              dni: responsibleData.dni || "",
+              phone: responsibleData.phone || "",
+            } : undefined,
+          };
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching participant by ID:", error);
+    }
+
+    // Fallback: obtener todos y filtrar (no incluye datos del responsable)
     const response = await fetch(`${API_URL}/users`, {
       method: "GET",
       headers: this.getHeaders(),
@@ -141,8 +187,14 @@ export const participantService = {
         address: found.address || found.direction || "",
         age: found.age || 0,
         type: found.type || found.type_stament || "PARTICIPANTE",
+        program: found.program || undefined,
         role: found.role || "USER",
         status: found.status || "ACTIVO",
+        responsible: found.responsible ? {
+          name: found.responsible.name || "",
+          dni: found.responsible.dni || "",
+          phone: found.responsible.phone || "",
+        } : undefined,
       };
     }
 
@@ -263,8 +315,6 @@ export const participantService = {
         program: data.program,
       };
 
-    console.log("Payload enviado:", JSON.stringify(payload, null, 2));
-
     const response = await fetch(`${API_URL}/save-participants`, {
       method: "POST",
       headers: this.getHeaders(),
@@ -295,6 +345,11 @@ export const participantService = {
     return result.data;
   },
 
+  /**
+   * Actualiza un participante existente.
+   * Si tiene datos de responsable (solo permitido si ya tenía responsable previamente),
+   * envía estructura anidada {participant: {...}, responsible: {...}}.
+   */
   async updateParticipant(externalId: string, data: UpdateParticipantData) {
     const response = await fetch(`${API_URL}/participants/${externalId}`, {
       method: "PUT",
