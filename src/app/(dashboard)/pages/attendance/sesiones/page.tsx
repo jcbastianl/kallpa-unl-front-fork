@@ -1,3 +1,9 @@
+/**
+ * @module Gestión de Sesiones
+ * @description Página para visualizar, editar y eliminar sesiones programadas.
+ * Muestra las sesiones agrupadas por día de la semana con opciones de administración.
+ */
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -8,6 +14,9 @@ import { Alert } from '@/components/ui-elements/alert';
 import { Button } from '@/components/ui-elements/button';
 import InputGroup from '@/components/FormElements/InputGroup';
 
+/**
+ * Componente de carga con spinner animado.
+ */
 function Loading() {
   return (
     <div className="flex items-center justify-center py-12">
@@ -16,20 +25,33 @@ function Loading() {
   );
 }
 
+/**
+ * Página principal de gestión de sesiones.
+ * Lista todas las sesiones programadas con opciones de edición y eliminación.
+ */
 export default function Sesiones() {
+  // Estado de datos
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | number | null>(null);
   const [editingSession, setEditingSession] = useState<Schedule | null>(null);
+  
+  // Estado de alertas
   const [showAlert, setShowAlert] = useState(false);
   const [alertVariant, setAlertVariant] = useState<'success' | 'error' | 'warning'>('success');
   const [alertTitle, setAlertTitle] = useState('');
   const [alertDescription, setAlertDescription] = useState('');
+  
+  // Estado de confirmación de eliminación
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<{ id: string | number, name: string } | null>(null);
 
+  // Orden de días para ordenar la vista
   const daysOrder = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
 
+  /**
+   * Dispara una alerta visual en la interfaz.
+   */
   const triggerAlert = (
     variant: 'success' | 'error' | 'warning',
     title: string,
@@ -49,11 +71,17 @@ export default function Sesiones() {
     loadSchedules();
   }, []);
 
+  /**
+   * Carga todas las sesiones programadas desde el servidor.
+   * Normaliza los datos del backend al formato del frontend.
+   */
   const loadSchedules = async () => {
     try {
       const res = await attendanceService.getSchedules();
 
-      // Función para normalizar día (quitar acentos y pasar a mayúsculas)
+      /**
+       * Normaliza el día de la semana a formato español mayúsculas.
+       */
       const normalizeDay = (day: string): string => {
         if (!day) return 'SIN DÍA';
         const normalized = day.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -82,11 +110,16 @@ export default function Sesiones() {
       });
       setSchedules(normalized);
     } catch (error) {
+      // Error silencioso
     } finally {
       setLoading(false);
     }
   };
 
+  /**
+   * Agrupa las sesiones por día de la semana.
+   * @returns Objeto con días como claves y arrays de sesiones como valores
+   */
   const groupByDay = () => {
     const grouped: Record<string, Schedule[]> = {};
     schedules.forEach(s => {
@@ -97,6 +130,9 @@ export default function Sesiones() {
     return grouped;
   };
 
+  /**
+   * Obtiene el color de fondo para cada día de la semana.
+   */
   const getDayColor = (day: string) => {
     const colors: Record<string, string> = {
       'LUNES': 'bg-blue-500', 'MARTES': 'bg-green-500', 'MIERCOLES': 'bg-yellow-500',
@@ -198,7 +234,7 @@ export default function Sesiones() {
             href="/pages/attendance/programar"
             className="inline-flex items-center gap-2 bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-900 transition-colors"
           >
-            <span className="material-symbols-outlined">add</span>
+            <span className="material-symbols-outlined" translate="no">add</span>
             Nueva Sesión
           </Link>
         </div>
@@ -243,7 +279,7 @@ export default function Sesiones() {
                               className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                               title="Editar sesión"
                             >
-                              <span className="material-symbols-outlined text-lg">edit</span>
+                              <span className="material-symbols-outlined text-lg" translate="no">edit</span>
                             </button>
                             <button
                               onClick={() => handleDelete(sessionId, session.name || 'esta sesión')}
@@ -251,7 +287,7 @@ export default function Sesiones() {
                               className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
                               title="Eliminar sesión"
                             >
-                              <span className="material-symbols-outlined text-lg">
+                              <span className="material-symbols-outlined text-lg" translate="no">
                                 {deleting === sessionId ? 'hourglass_empty' : 'delete'}
                               </span>
                             </button>
@@ -259,12 +295,12 @@ export default function Sesiones() {
                         </div>
                         <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
                           <span className="flex items-center gap-1">
-                            <span className="material-symbols-outlined text-base">schedule</span>
+                            <span className="material-symbols-outlined text-base" translate="no">schedule</span>
                             {session.start_time} - {session.end_time}
                           </span>
                           {session.location && (
                             <span className="flex items-center gap-1">
-                              <span className="material-symbols-outlined text-base">location_on</span>
+                              <span className="material-symbols-outlined text-base" translate="no">location_on</span>
                               {session.location}
                             </span>
                           )}
@@ -286,14 +322,14 @@ export default function Sesiones() {
 
         {Object.keys(grouped).length === 0 && (
           <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
-            <span className="material-symbols-outlined text-6xl text-gray-300 mb-4">event_busy</span>
+            <span className="material-symbols-outlined text-6xl text-gray-300 mb-4" translate="no">event_busy</span>
             <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">No hay sesiones programadas</h3>
             <p className="text-gray-500 dark:text-gray-400 mb-4">Comienza creando una nueva sesión</p>
             <Link
               href="/pages/attendance/programar"
               className="inline-flex items-center gap-2 bg-blue-800 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-900 transition-colors"
             >
-              <span className="material-symbols-outlined">add</span>
+              <span className="material-symbols-outlined" translate="no">add</span>
               Crear Sesión
             </Link>
           </div>
@@ -308,7 +344,7 @@ export default function Sesiones() {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Editar Sesión</h2>
                 <button onClick={() => setEditingSession(null)} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                  <span className="material-symbols-outlined">close</span>
+                  <span className="material-symbols-outlined" translate="no">close</span>
                 </button>
               </div>
             </div>
@@ -372,7 +408,7 @@ export default function Sesiones() {
           <div className="bg-white dark:bg-gray-dark rounded-xl shadow-xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
-                <span className="material-symbols-outlined text-red-600 dark:text-red-400">warning</span>
+                <span className="material-symbols-outlined text-red-600 dark:text-red-400" translate="no">warning</span>
               </div>
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Confirmar eliminación</h3>

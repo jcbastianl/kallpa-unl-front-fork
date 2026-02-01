@@ -1,3 +1,10 @@
+/**
+ * @module Gestión de Participantes
+ * @description Página para visualizar y gestionar participantes del sistema.
+ * Muestra lista de usuarios (estudiantes, pasantes, profesores) con estadísticas
+ * de asistencia y permite filtrar por tipo y programa.
+ */
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -6,12 +13,15 @@ import { attendanceService } from '@/services/attendance.services';
 import { participantService } from '@/services/participant.service';
 import type { Participant } from '@/types/attendance';
 
+/**
+ * Componente de tarjeta estadística para mostrar métricas resumidas.
+ */
 function StatCard({ icon, iconBg, label, value }: { icon: string; iconBg: string; label: string; value: string | number }) {
   return (
     <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-3">
         <div className={`${iconBg} p-2 rounded-lg`}>
-          <span className="material-symbols-outlined">{icon}</span>
+          <span className="material-symbols-outlined" translate="no">{icon}</span>
         </div>
         <div>
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">{label}</p>
@@ -22,6 +32,9 @@ function StatCard({ icon, iconBg, label, value }: { icon: string; iconBg: string
   );
 }
 
+/**
+ * Componente de carga con spinner animado.
+ */
 function Loading() {
   return (
     <div className="flex items-center justify-center py-12">
@@ -30,17 +43,24 @@ function Loading() {
   );
 }
 
+/**
+ * Página principal de gestión de participantes.
+ * Lista todos los usuarios con filtros por tipo y búsqueda.
+ */
 export default function Participantes() {
+  // Estado de datos
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [filteredParticipants, setFilteredParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pasantesData, setPasantesData] = useState<Participant[]>([]);
+  
+  // Estado de filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('ALL');
-  const [pasantesData, setPasantesData] = useState<Participant[]>([]);
   const [programFilter, setProgramFilter] = useState('');
   const [attendanceStats, setAttendanceStats] = useState<Record<string, { present: number; total: number; percentage: number }>>({});
 
-  // Fixed program options
+  // Opciones de programa disponibles
   const PROGRAM_OPTIONS = [
     { value: '', label: 'Todos los programas' },
     { value: 'INICIACION', label: 'Iniciación' },
@@ -52,15 +72,15 @@ export default function Participantes() {
     loadPasantes();
   }, []);
 
-
-
   useEffect(() => {
     applyFilters();
   }, [participants, pasantesData, searchTerm, filterType]);
 
+  /**
+   * Carga todos los usuarios del sistema.
+   */
   const loadParticipants = async () => {
     try {
-      // Usar getAllUsers para obtener todos los usuarios incluyendo profesores
       const res = await attendanceService.getAllUsers();
       const rawData = res.data.data || [];
       const normalized = rawData.map((p: any) => ({
@@ -72,12 +92,15 @@ export default function Participantes() {
       })) as Participant[];
       setParticipants(normalized);
     } catch (error) {
+      // Error silencioso
     } finally {
       setLoading(false);
     }
   };
 
-  // Cargar pasantes desde el endpoint específico del backend
+  /**
+   * Carga los pasantes desde el endpoint específico.
+   */
   const loadPasantes = async () => {
     try {
       const pasantes = await participantService.getPasantes();
@@ -90,36 +113,27 @@ export default function Participantes() {
       })) as Participant[];
       setPasantesData(normalized);
     } catch (error) {
+      // Error silencioso
     }
   };
 
-  // Load attendance stats
-  // Note: Backend v2/public/participants now returns attendance_percentage directly.
-  // However, we still fetch history if we need detailed per-program calculation not provided by the main endpoint based on filter.
-  // If the backend returns percentage in getParticipantsRes, we can use that.
-  // But for now, we'll keep this logic as a robust fallback or for confirming filtering.
-  // Actually, let's update this to be simpler and use what we have, 
-  // or just rely on the main participants list if it has the data.
-  // Given the backend guide says /api/attendance/v2/public/participants returns attendance_percentage,
-  // we should check if we can use that directly and avoid this heavy calculation.
-  // But the participant list might be filtered by program on the backend? 
-  // The service method getParticipantsByProgram takes a program arg.
-  // So we should re-fetch participants when program filter changes.
-
+  /**
+   * Carga participantes filtrados por programa.
+   * El backend retorna attendance_percentage directamente.
+   * @param program - Nombre del programa para filtrar
+   */
   const loadParticipantsByProgram = async (program: string) => {
     setLoading(true);
     try {
       const res = await attendanceService.getParticipantsByProgram(program === 'Todos los programas' ? undefined : program);
       const data = res.data.data || [];
-      // Backend now sends attendance_percentage directly in the participant object
       setParticipants(data);
 
-      // Update stats state for the progress bar
-      // We map the backend's attendance_percentage to our local state format
+      // Mapear porcentaje de asistencia del backend
       const newStats: Record<string, { present: number; total: number; percentage: number }> = {};
       data.forEach((p: any) => {
         newStats[p.external_id || p.id] = {
-          present: 0, // We might not get exact counts, but we have percentage
+          present: 0,
           total: 0,
           percentage: p.attendance_percentage || 0
         };
@@ -127,16 +141,20 @@ export default function Participantes() {
       setAttendanceStats(newStats);
 
     } catch (error) {
+      // Error silencioso
     } finally {
       setLoading(false);
     }
   };
 
+  /**
+   * Aplica los filtros de búsqueda y tipo a la lista de participantes.
+   */
   const applyFilters = () => {
     let filtered = [...participants];
 
+    // Filtrar por tipo de usuario
     if (filterType === 'ESTUDIANTE') {
-      // Incluir EXTERNO y PASANTE también como participante
       filtered = filtered.filter(p =>
         ['PARTICIPANTE', 'ESTUDIANTE', 'INICIACION', 'STUDENT', 'EXTERNO', 'PASANTE'].includes((p as any).type?.toUpperCase())
       );
@@ -149,7 +167,6 @@ export default function Participantes() {
         (p as any).type?.toUpperCase() === 'EXTERNO'
       );
     } else if (filterType === 'PASANTE') {
-      // Usar datos del endpoint específico de pasantes
       filtered = pasantesData.length > 0 ? [...pasantesData] : participants.filter(p =>
         (p as any).type?.toUpperCase() === 'PASANTE'
       );
@@ -157,6 +174,7 @@ export default function Participantes() {
       filtered = filtered.filter(p => ['ADMIN', 'STAFF'].includes((p as any).type?.toUpperCase()));
     }
 
+    // Filtrar por término de búsqueda
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(p =>
@@ -169,6 +187,9 @@ export default function Participantes() {
     setFilteredParticipants(filtered);
   };
 
+  /**
+   * Obtiene las iniciales de un nombre para mostrar en avatar.
+   */
   const getInitials = (name: string) => {
     if (!name) return '??';
     const parts = name.split(' ');
@@ -178,6 +199,9 @@ export default function Participantes() {
     return name.substring(0, 2).toUpperCase();
   };
 
+  /**
+   * Verifica si un tipo de usuario es profesor.
+   */
   const isTeacher = (type: string) => {
     return type?.toUpperCase() === 'PROFESOR';
   };
@@ -221,7 +245,7 @@ export default function Participantes() {
       <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
         <div className="p-4 flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" translate="no">search</span>
             <input
               type="text"
               placeholder="Buscar por nombre, cédula o email..."
@@ -281,7 +305,7 @@ export default function Participantes() {
               {filteredParticipants.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                    <span className="material-symbols-outlined text-4xl mb-2 block">group_off</span>
+                    <span className="material-symbols-outlined text-4xl mb-2 block" translate="no">group_off</span>
                     <p>No se encontraron participantes</p>
                   </td>
                 </tr>

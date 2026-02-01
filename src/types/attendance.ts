@@ -1,3 +1,11 @@
+/**
+ * @module attendance.types
+ * @description Tipos e interfaces para el módulo de gestión de asistencia.
+ * Define estructuras de datos para sesiones, horarios, participantes,
+ * registros de asistencia y programas.
+ */
+
+/** Sesión de asistencia con información básica */
 export interface Session {
   id: string | number;
   external_id?: string;
@@ -12,24 +20,26 @@ export interface Session {
   participant_count?: number;
 }
 
+/** Horario programado para sesiones de asistencia */
 export interface Schedule {
   id: string | number;
   external_id?: string;
   name: string;
-  program: string; // Updated: Program is now a string
+  program: string;
   start_time: string;
   end_time: string;
   day_of_week: string;
   location?: string;
   capacity?: number;
   description?: string;
-  specific_date?: string | null;  // Fecha específica (null si es recurrente)
-  start_date?: string | null;     // Rango de fechas inicio
-  end_date?: string | null;       // Rango de fechas fin
-  is_recurring?: boolean;         // false=fecha única, true=semanal
+  specific_date?: string | null;  // null = sesión recurrente
+  start_date?: string | null;     // Inicio del rango válido
+  end_date?: string | null;       // Fin del rango válido
+  is_recurring?: boolean;
   max_slots?: number;
 }
 
+/** Participante del sistema (estudiante, profesor, etc.) */
 export interface Participant {
   id: string;
   external_id?: string;
@@ -41,6 +51,7 @@ export interface Participant {
   status: string;
 }
 
+/** Registro individual de asistencia */
 export interface AttendanceRecord {
   id?: string;
   participant_id: string;
@@ -50,6 +61,7 @@ export interface AttendanceRecord {
   status: 'PRESENT' | 'ABSENT' | 'JUSTIFIED';
 }
 
+/** Resumen de historial de asistencia por sesión */
 export interface AttendanceHistory {
   schedule_id: string;
   schedule_name: string;
@@ -62,10 +74,10 @@ export interface AttendanceHistory {
   total: number;
 }
 
-// Alias para compatibilidad
+/** Alias para compatibilidad con código existente */
 export type HistoryRecord = AttendanceHistory;
 
-// Interface para Programas
+/** Programa de entrenamiento */
 export interface Program {
   id: number;
   external_id: string;
@@ -76,29 +88,29 @@ export interface Program {
   schedules_count?: number;
 }
 
+/** Datos para crear un nuevo programa */
 export interface CreateProgramData {
   name: string;
   description?: string;
   color?: string;
 }
 
-// Interface para crear sesiones
+/** Datos para crear un nuevo horario (formato del backend - camelCase) */
 export interface CreateScheduleData {
   name: string;
   program: string;
-  startTime: string;     // ✅ Backend espera camelCase
-  endTime: string;       // ✅ Backend espera camelCase
+  startTime: string;
+  endTime: string;
   location?: string;
-  maxSlots?: number;     // ✅ Backend espera camelCase
+  maxSlots?: number;
   description?: string;
   program_id?: string;
-  // Para sesiones recurrentes
-  dayOfWeek?: string;    // ✅ Backend espera camelCase y UPPERCASE
-  endDate?: string;      // ✅ Backend espera camelCase
-  // Para sesiones con fecha específica
-  specificDate?: string; // ✅ Backend espera camelCase
+  dayOfWeek?: string;    // Para sesiones recurrentes (UPPERCASE)
+  endDate?: string;      // Fin del periodo recurrente
+  specificDate?: string; // Para sesiones de fecha única
 }
 
+/** Detalle completo de una sesión con estadísticas y registros */
 export interface SessionDetail {
   date: string;
   schedule?: Schedule;
@@ -108,6 +120,6 @@ export interface SessionDetail {
     justified: number;
     total: number;
   };
-  attendances?: any[]; // Using any[] temporarily or define a proper interface if needed
+  attendances?: any[];
   records?: AttendanceRecord[];
 }

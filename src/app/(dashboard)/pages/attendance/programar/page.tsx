@@ -1,8 +1,16 @@
+/**
+ * @module Programación de Sesiones
+ * @description Página para crear y gestionar horarios de sesiones de asistencia.
+ * Permite crear sesiones recurrentes (por día de semana) o sesiones con fecha específica.
+ * Muestra un horario semanal visual con las sesiones programadas.
+ */
+
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import DatePickerTwo from '@/components/FormElements/DatePicker/DatePickerTwo';
 import { attendanceService } from '@/services/attendance.services';
 import type { Schedule, Program } from '@/types/attendance';
 import { Alert } from '@/components/ui-elements/alert';
@@ -10,7 +18,9 @@ import ErrorMessage from '@/components/FormElements/errormessage';
 import { Button } from '@/components/ui-elements/button';
 import { Select } from '@/components/FormElements/select';
 import InputGroup from '@/components/FormElements/InputGroup';
+import { parseDate } from '@/lib/utils';
 
+// Días de la semana disponibles para programación
 const DAYS_OF_WEEK = [
   { value: 'monday', label: 'Lunes' },
   { value: 'tuesday', label: 'Martes' },
@@ -21,8 +31,12 @@ const DAYS_OF_WEEK = [
   { value: 'sunday', label: 'Domingo' },
 ];
 
+/** Tipo de sesión: recurrente (semanal) o fecha específica */
 type SessionType = 'recurring' | 'specific';
 
+/**
+ * Componente de carga con spinner animado.
+ */
 function Loading() {
   return (
     <div className="flex items-center justify-center py-12">
@@ -31,22 +45,35 @@ function Loading() {
   );
 }
 
+/**
+ * Página principal de programación de sesiones.
+ * Permite crear nuevas sesiones y visualizar el horario semanal.
+ */
 export default function Programar() {
   const router = useRouter();
+  
+  // Estado de carga y guardado
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Datos principales
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
+  
+  // Estado del formulario
   const [sessionType, setSessionType] = useState<SessionType>('recurring');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // Estado de alertas
   const [showAlert, setShowAlert] = useState(false);
   const [alertVariant, setAlertVariant] = useState<'success' | 'error' | 'warning'>('success');
   const [alertTitle, setAlertTitle] = useState('');
   const [alertDescription, setAlertDescription] = useState('');
 
+  // Datos del formulario de nueva sesión
   const [formData, setFormData] = useState({
     name: '',
-    program: '', // Program field (INICIACION or FUNCIONAL)
+    program: '',
     day_of_week: '',
     start_time: '08:00',
     end_time: '09:00',
@@ -54,13 +81,11 @@ export default function Programar() {
     capacity: 30,
     description: '',
     program_id: '',
-    // Campos para sesión recurrente
-    end_date: '',
-    // Campo para sesión con fecha específica
-    specific_date: ''
+    end_date: '',        // Para sesiones recurrentes
+    specific_date: ''    // Para sesiones de fecha específica
   });
 
-  // Fixed program options
+  // Opciones de programa disponibles
   const PROGRAM_OPTIONS = [
     { value: 'INICIACION', label: 'Iniciación' },
     { value: 'FUNCIONAL', label: 'Funcional' },
@@ -70,11 +95,16 @@ export default function Programar() {
     loadData();
   }, []);
 
-  // Mapeo para normalizar días de la semana a inglés minúscula (formato del backend)
+  /**
+   * Normaliza el nombre del día de semana a formato inglés minúsculas.
+   * Soporta entrada en español e inglés.
+   * @param day - Nombre del día a normalizar
+   * @returns Día normalizado en inglés minúsculas
+   */
   const normalizeDayOfWeek = (day: string): string => {
     if (!day) return '';
 
-    const dayLower = day.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Normalizar y quitar acentos para comparación
+    const dayLower = day.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
     const dayMap: Record<string, string> = {
       'monday': 'monday', 'lunes': 'monday',
@@ -88,6 +118,9 @@ export default function Programar() {
     return dayMap[dayLower] || day || '';
   };
 
+  /**
+   * Carga los horarios existentes desde el servidor.
+   */
   const loadData = async () => {
     try {
       const res = await attendanceService.getSchedules();
@@ -119,11 +152,15 @@ export default function Programar() {
 
       setSchedules(normalizedSchedules);
     } catch (error) {
+      // Error silencioso
     } finally {
       setLoading(false);
     }
   };
 
+  /**
+   * Dispara una alerta visual en la interfaz.
+   */
   const triggerAlert = (
     variant: 'success' | 'error' | 'warning',
     title: string,
@@ -139,6 +176,9 @@ export default function Programar() {
     }, 5000);
   };
 
+  /**
+   * Limpia el error de un campo específico.
+   */
   const clearFieldError = (field: string) => {
     setErrors((prev) => {
       const copy = { ...prev };
@@ -147,6 +187,10 @@ export default function Programar() {
     });
   };
 
+  /**
+   * Maneja cambios en los campos del formulario.
+   * Incluye validación especial para end_date vs día de semana.
+   */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -154,7 +198,7 @@ export default function Programar() {
       [name]: value
     }));
 
-    // Validar que end_date coincida con el día de la semana seleccionado
+    // Validar coherencia entre día de semana y fecha final
     if (name === 'end_date' && value && formData.day_of_week) {
       const selectedDate = new Date(value + 'T00:00:00');
       const dayOfWeekMap: Record<string, number> = {
@@ -180,14 +224,18 @@ export default function Programar() {
     clearFieldError(name);
   };
 
+  /**
+   * Procesa el envío del formulario para crear una nueva sesión.
+   * Realiza validaciones y envía al servidor.
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
     setSaving(true);
 
-    // Validaciones frontend
     const newErrors: Record<string, string> = {};
 
+    // Validaciones de campos requeridos
     if (!formData.name.trim()) {
       newErrors.name = 'El nombre de la sesión es obligatorio';
     } else if (formData.name.trim().length < 3) {
@@ -230,30 +278,29 @@ export default function Programar() {
     }
 
     try {
-      // Construir datos según el tipo de sesión
+      // Construir payload para el backend (camelCase)
       const dataToSend: any = {
         name: formData.name,
         program: formData.program,
-        startTime: formData.start_time,  // ✅ Backend espera startTime (camelCase)
-        endTime: formData.end_time,      // ✅ Backend espera endTime (camelCase)
+        startTime: formData.start_time,
+        endTime: formData.end_time,
         location: formData.location || undefined,
-        maxSlots: Number(formData.capacity), // ✅ Backend espera maxSlots (camelCase)
+        maxSlots: Number(formData.capacity),
         description: formData.description || undefined,
         program_id: formData.program_id || undefined,
       };
 
       if (sessionType === 'recurring') {
-        // Sesión recurrente (semanal)
+        // Mapeo de día a formato del backend (mayúsculas)
         const dayMap: Record<string, string> = {
           'Lunes': 'MONDAY', 'Martes': 'TUESDAY', 'Miércoles': 'WEDNESDAY',
           'Jueves': 'THURSDAY', 'Viernes': 'FRIDAY', 'Sábado': 'SATURDAY', 'Domingo': 'SUNDAY'
         };
-        dataToSend.dayOfWeek = dayMap[formData.day_of_week] || formData.day_of_week.toUpperCase(); // ✅ Backend espera dayOfWeek (camelCase) y en mayúsculas
+        dataToSend.dayOfWeek = dayMap[formData.day_of_week] || formData.day_of_week.toUpperCase();
 
-        if (formData.end_date) dataToSend.endDate = formData.end_date; // ✅ camelCase
+        if (formData.end_date) dataToSend.endDate = formData.end_date;
       } else {
-        // Sesión con fecha específica
-        dataToSend.specificDate = formData.specific_date; // ✅ camelCase
+        dataToSend.specificDate = formData.specific_date;
       }
 
       await attendanceService.createSchedule(dataToSend);
@@ -263,7 +310,7 @@ export default function Programar() {
         'La sesión se ha programado correctamente en el calendario.'
       );
 
-      // Limpiar formulario
+      // Reiniciar formulario
       setFormData({
         name: '',
         program: '',
@@ -277,25 +324,42 @@ export default function Programar() {
         end_date: '',
         specific_date: ''
       });
-
-      // Recargar horarios
+      setErrors({});
       loadData();
     } catch (error: any) {
+      // Manejo de errores del backend
       if (error?.response?.data && typeof error.response.data === 'object') {
         const errorData = error.response.data;
-        if (errorData.errors && typeof errorData.errors === 'object') {
-          setErrors(errorData.errors);
+
+        if (errorData.data && typeof errorData.data === 'object') {
+          const translatedErrors: Record<string, string> = {};
+
+          Object.keys(errorData.data).forEach(key => {
+            let message = errorData.data[key];
+
+            // Traducir mensaje de conflicto de horarios
+            if (key === 'schedule' && message.includes('se solapa')) {
+              const match = message.match(/: (.+?)$/);
+              const programName = match ? match[1].trim() : '';
+              message = `Ya existe una sesión del programa "${programName}" en este horario. Por favor elige otro día u hora.`;
+            }
+
+            translatedErrors[key] = message;
+          });
+
+          setErrors(translatedErrors);
+        } else {
+          triggerAlert(
+            'error',
+            'Error al crear sesión',
+            errorData.message || errorData.msg || 'No se pudo crear la sesión.'
+          );
         }
-        triggerAlert(
-          'error',
-          'Error al crear sesión',
-          errorData.message || errorData.msg || 'Revisa los campos marcados en rojo.'
-        );
       } else {
         triggerAlert(
           'error',
           'Error al crear sesión',
-          error?.message || 'No se pudo crear la sesión. Intenta nuevamente.'
+          'No se pudo crear la sesión. Intenta nuevamente.'
         );
       }
     } finally {
@@ -303,11 +367,67 @@ export default function Programar() {
     }
   };
 
+  /**
+   * Agrupa los horarios por día de la semana para mostrar en la vista semanal.
+   * Filtra solo sesiones activas (no expiradas).
+   * @returns Objeto con días como claves y arrays de horarios como valores
+   */
   const getSchedulesByDay = () => {
-    const byDay: Record<string, Schedule[]> = {};
-    DAYS_OF_WEEK.forEach(d => {
-      byDay[d.value] = schedules.filter(s => s.day_of_week === d.value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const dayNumberToValue = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+    // Filtrar solo sesiones activas
+    const activeSchedules = schedules.filter(s => {
+      const specificDate = (s as any).specific_date || (s as any).specificDate;
+      if (specificDate) {
+        const sessionDate = parseDate(specificDate);
+        sessionDate.setHours(0, 0, 0, 0);
+        return sessionDate >= today;
+      }
+
+      const endDateStr = (s as any).end_date || (s as any).endDate;
+      if (endDateStr) {
+        const endDate = parseDate(endDateStr);
+        endDate.setHours(0, 0, 0, 0);
+        return endDate >= today;
+      }
+
+      // Si no tiene fecha de fin, la sesión está activa
+      return true;
     });
+
+    const byDay: Record<string, Schedule[]> = {};
+    
+    // Inicializar todos los días
+    DAYS_OF_WEEK.forEach(d => {
+      byDay[d.value] = [];
+    });
+
+    activeSchedules.forEach(s => {
+      const specificDate = (s as any).specific_date || (s as any).specificDate;
+      
+      if (specificDate) {
+        // Para sesiones con fecha específica, determinar el día de la semana
+        const sessionDate = parseDate(specificDate);
+        const dayOfWeek = sessionDate.getDay(); // 0=domingo, 1=lunes, etc.
+        const dayValue = dayNumberToValue[dayOfWeek];
+        
+        // Solo incluir si es de esta semana (próximos 7 días)
+        const daysDiff = Math.ceil((sessionDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysDiff >= 0 && daysDiff <= 6) {
+          byDay[dayValue].push(s);
+        }
+      } else {
+        // Para sesiones recurrentes
+        const dayOfWeek = s.day_of_week;
+        if (dayOfWeek && byDay[dayOfWeek]) {
+          byDay[dayOfWeek].push(s);
+        }
+      }
+    });
+
     return byDay;
   };
 
@@ -338,7 +458,7 @@ export default function Programar() {
         {/* Form Section */}
         <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-            <span className="material-symbols-outlined text-blue-800">add_circle</span>
+            <span className="material-symbols-outlined text-blue-800" translate="no">add_circle</span>
             Nueva Sesión
           </h2>
 
@@ -351,7 +471,6 @@ export default function Programar() {
                 value={formData.name}
                 handleChange={handleChange}
                 placeholder="Ej: Yoga Matutino"
-                required
               />
               <ErrorMessage message={errors.name} />
             </div>
@@ -413,15 +532,11 @@ export default function Programar() {
                   <ErrorMessage message={errors.day_of_week} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha fin (opcional)</label>
-                  <input
-                    type="date"
-                    name="end_date"
+                  <DatePickerTwo
+                    label="Fecha fin (opcional)"
                     value={formData.end_date}
-                    onChange={handleChange}
-                    min={new Date().toISOString().split('T')[0]}
-                    disabled={!formData.day_of_week}
-                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    onChange={(newDate) => setFormData({ ...formData, end_date: newDate })}
+                    minDate="today"
                   />
                   <ErrorMessage message={errors.end_date} />
                   {formData.day_of_week && (
@@ -431,14 +546,11 @@ export default function Programar() {
               </>
             ) : (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha de la sesión *</label>
-                <input
-                  type="date"
-                  name="specific_date"
+                <DatePickerTwo
+                  label="Fecha específica"
                   value={formData.specific_date}
-                  onChange={handleChange}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                  onChange={(newDate) => setFormData({ ...formData, specific_date: newDate })}
+                  minDate="today"
                 />
                 <ErrorMessage message={errors.specific_date} />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">El día de la semana se calculará automáticamente</p>
@@ -476,6 +588,13 @@ export default function Programar() {
               </div>
             </div>
 
+            {/* Error de conflicto de horarios */}
+            {errors.schedule && (
+              <div className="col-span-2">
+                <ErrorMessage message={errors.schedule} />
+              </div>
+            )}
+
             <InputGroup
               label="Ubicación"
               type="text"
@@ -511,7 +630,7 @@ export default function Programar() {
               variant="primary"
               shape="rounded"
               className="w-full !bg-blue-800 hover:!bg-blue-900"
-              icon={saving ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : <span className="material-symbols-outlined">save</span>}
+              icon={saving ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : <span className="material-symbols-outlined" translate="no">save</span>}
             />
           </form>
         </div>
@@ -519,7 +638,7 @@ export default function Programar() {
         {/* Existing Schedules */}
         <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-            <span className="material-symbols-outlined text-blue-800">calendar_month</span>
+            <span className="material-symbols-outlined text-blue-800" translate="no">calendar_month</span>
             Horario Semanal Actual
           </h2>
 
@@ -552,7 +671,7 @@ export default function Programar() {
 
           {schedules.length === 0 && (
             <div className="text-center py-8">
-              <span className="material-symbols-outlined text-4xl text-gray-300 mb-2">event_busy</span>
+              <span className="material-symbols-outlined text-4xl text-gray-300 mb-2" translate="no">event_busy</span>
               <p className="text-gray-500 dark:text-gray-400">No hay sesiones programadas</p>
               <p className="text-sm text-gray-400 dark:text-gray-500">Crea tu primera sesión usando el formulario</p>
             </div>

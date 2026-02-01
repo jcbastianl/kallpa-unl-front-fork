@@ -1,3 +1,10 @@
+/**
+ * @module Historial de Asistencia
+ * @description Página para visualizar y gestionar el historial de asistencias.
+ * Permite filtrar por rango de fechas y día de la semana, ver detalles de sesiones
+ * y eliminar registros de asistencia.
+ */
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -7,13 +14,17 @@ import type { Schedule, HistoryRecord, SessionDetail } from '@/types/attendance'
 import { Alert } from '@/components/ui-elements/alert';
 import { Button } from '@/components/ui-elements/button';
 import { Select } from '@/components/FormElements/select';
+import DatePickerTwo from '@/components/FormElements/DatePicker/DatePickerTwo';
 
+/**
+ * Componente de tarjeta estadística para mostrar métricas resumidas.
+ */
 function StatCard({ icon, iconBg, label, value }: { icon: string; iconBg: string; label: string; value: string | number }) {
   return (
     <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-3">
         <div className={`${iconBg} p-2 rounded-lg`}>
-          <span className="material-symbols-outlined">{icon}</span>
+          <span className="material-symbols-outlined" translate="no">{icon}</span>
         </div>
         <div>
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">{label}</p>
@@ -24,6 +35,9 @@ function StatCard({ icon, iconBg, label, value }: { icon: string; iconBg: string
   );
 }
 
+/**
+ * Componente de carga con spinner animado.
+ */
 function Loading() {
   return (
     <div className="flex items-center justify-center py-12">
@@ -32,11 +46,18 @@ function Loading() {
   );
 }
 
+/**
+ * Página principal del historial de asistencias.
+ * Muestra una tabla con registros de asistencia filtrable por fechas y día.
+ */
 export default function Historial() {
+  // Estado de datos
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [sessionDetail, setSessionDetail] = useState<SessionDetail | null>(null);
+  
+  // Estado de modales y alertas
   const [showModal, setShowModal] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertVariant, setAlertVariant] = useState<'success' | 'error' | 'warning'>('success');
@@ -45,17 +66,23 @@ export default function Historial() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [attendanceToDelete, setAttendanceToDelete] = useState<{ scheduleId: string, date: string, name: string } | null>(null);
 
+  // Estado de filtros - fecha desde (últimos 7 días por defecto)
   const [dateFrom, setDateFrom] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
+  
+  // Estado de filtros - fecha hasta (hoy por defecto)
   const [dateTo, setDateTo] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
   const [filterDay, setFilterDay] = useState('Todos los días');
 
+  /**
+   * Dispara una alerta visual en la interfaz.
+   */
   const triggerAlert = (
     variant: 'success' | 'error' | 'warning',
     title: string,
@@ -75,12 +102,18 @@ export default function Historial() {
     loadData();
   }, []);
 
+  /**
+   * Effect para recargar historial cuando cambian los filtros.
+   */
   useEffect(() => {
     if (dateFrom && dateTo) {
       loadHistory();
     }
   }, [dateFrom, dateTo, filterDay]);
 
+  /**
+   * Carga inicial de datos: historial y horarios disponibles.
+   */
   const loadData = async () => {
     try {
       const [historyRes, schedulesRes] = await Promise.all([
@@ -88,10 +121,12 @@ export default function Historial() {
         attendanceService.getSchedules()
       ]);
 
+      // Mapeo de días inglés a español
       const dayMap: Record<string, string> = {
         'monday': 'LUNES', 'tuesday': 'MARTES', 'wednesday': 'MIERCOLES',
         'thursday': 'JUEVES', 'friday': 'VIERNES', 'saturday': 'SABADO', 'sunday': 'DOMINGO'
       };
+      
       const rawSchedules = schedulesRes.data.data || [];
       const normalizedSchedules = rawSchedules.map((s: any) => ({
         ...s,
@@ -102,24 +137,27 @@ export default function Historial() {
       }));
       setSchedules(normalizedSchedules);
 
-      // El backend ya devuelve los datos agrupados, solo normalizamos
       const rawHistory = historyRes.data.data || [];
       const normalizedHistory = normalizeHistoryData(rawHistory);
       setHistory(normalizedHistory);
     } catch (error) {
+      // Error silencioso
     } finally {
       setLoading(false);
     }
   };
 
-  // Backend now returns pre-aggregated session summaries.
-  // Just normalize the field names if needed and pass through.
-  // Agrupa los registros planos (uno por participante) en resúmenes por sesión
+  /**
+   * Normaliza y agrupa los registros planos de asistencia en resúmenes por sesión.
+   * El backend devuelve un registro por participante, esta función los agrupa
+   * por fecha y horario para mostrar totales.
+   * @param records - Registros planos del backend
+   * @returns Registros agrupados con conteo de presentes/ausentes
+   */
   const normalizeHistoryData = (records: any[]): HistoryRecord[] => {
     const groups: Record<string, HistoryRecord> = {};
 
     records.forEach(r => {
-      // Clave única para agrupar: fecha + id de horario
       const scheduleId = r.schedule?.external_id || r.schedule_id || '';
       const date = r.date;
       const key = `${date}_${scheduleId}`;
@@ -138,7 +176,6 @@ export default function Historial() {
         };
       }
 
-      // Incrementar contadores según estado
       const status = r.status?.toUpperCase();
       if (status === 'PRESENT') {
         groups[key].presentes++;
@@ -148,10 +185,12 @@ export default function Historial() {
       groups[key].total++;
     });
 
-    // Convertir el objeto agrupado en array y ordenar por fecha descendente
     return Object.values(groups).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
 
+  /**
+   * Recarga el historial con los filtros actuales.
+   */
   const loadHistory = async () => {
     try {
       const res = await attendanceService.getHistory(dateFrom, dateTo, undefined, filterDay);
@@ -159,11 +198,17 @@ export default function Historial() {
       const normalizedHistory = normalizeHistoryData(rawHistory);
       setHistory(normalizedHistory);
     } catch (error) {
+      // Error silencioso
     }
   };
 
+  /**
+   * Carga y muestra el detalle de una sesión específica.
+   * @param scheduleId - ID del horario
+   * @param date - Fecha de la sesión
+   */
   const viewDetail = async (scheduleId: string, date: string) => {
-    if (!scheduleId) return; // Prevent invalid URL request
+    if (!scheduleId) return;
     try {
       const res = await attendanceService.getSessionDetail(scheduleId, date);
 
@@ -341,16 +386,22 @@ export default function Historial() {
 
       {/* Filters */}
       <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Desde</label>
-            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white" />
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="min-w-0">
+            <DatePickerTwo
+              label="Desde"
+              value={dateFrom}
+              onChange={(newDate) => setDateFrom(newDate)}
+            />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hasta</label>
-            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white" />
+          <div className="min-w-0">
+            <DatePickerTwo
+              label="Hasta"
+              value={dateTo}
+              onChange={(newDate) => setDateTo(newDate)}
+            />
           </div>
-          <div className="flex-1">
+          <div className="min-w-0 md:col-span-2 xl:col-span-1">
             <Select
               label="Día"
               value={filterDay}
@@ -368,13 +419,24 @@ export default function Historial() {
               ]}
             />
           </div>
+          <div className="min-w-0 flex items-end">
+            <Button
+              label="Buscar"
+              variant="primary"
+              shape="rounded"
+              size="small"
+              className="w-full !bg-blue-800 hover:!bg-blue-900"
+              icon={<span className="material-symbols-outlined text-sm" translate="no">search</span>}
+              onClick={loadHistory}
+            />
+          </div>
         </div>
       </div>
 
       {/* History Table */}
       <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full" style={{ minWidth: '900px' }}>
             <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
               <tr>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Fecha</th>
@@ -390,29 +452,63 @@ export default function Historial() {
               {filteredHistory.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                    <span className="material-symbols-outlined text-4xl mb-2 block">history</span>
+                    <span className="material-symbols-outlined text-4xl mb-2 block" translate="no">history</span>
                     <p>No hay registros en este período</p>
                   </td>
                 </tr>
               ) : (
                 filteredHistory.map((h, idx) => (
                   <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap"><span className="font-medium text-gray-900 dark:text-white">{formatDate(h.date, h.day_of_week)}</span></td>
-                    <td className="px-6 py-4 whitespace-nowrap"><span className="text-gray-900 dark:text-white">{h.schedule_name}</span></td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{h.start_time} - {h.end_time}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center"><span className="px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">{h.presentes || 0}</span></td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center"><span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">{h.ausentes || 0}</span></td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center font-semibold text-gray-900 dark:text-white">{h.total || 0}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {formatDate(h.date, h.day_of_week)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-gray-900 dark:text-white">
+                        {h.schedule_name}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {h.start_time} - {h.end_time}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                        {h.presentes || 0}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">
+                        {h.ausentes || 0}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center font-semibold text-gray-900 dark:text-white">
+                      {h.total || 0}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => viewDetail(h.schedule_id, h.date)} className="text-blue-800 hover:text-blue-900" title="Ver detalle">
-                          <span className="material-symbols-outlined text-lg">visibility</span>
+                        <button 
+                          onClick={() => viewDetail(h.schedule_id, h.date)} 
+                          className="text-blue-800 hover:text-blue-900" 
+                          title="Ver detalle"
+                        >
+                          <span className="material-symbols-outlined text-lg" translate="no">visibility</span>
                         </button>
-                        <Link href={`/pages/attendance/registro?session=${h.schedule_id}&date=${h.date}`} className="text-gray-600 hover:text-gray-800 dark:text-gray-400" title="Editar asistencia">
-                          <span className="material-symbols-outlined text-lg">edit</span>
+                        <Link 
+                          href={`/pages/attendance/registro?session=${h.schedule_id}&date=${h.date}`} 
+                          className="text-gray-600 hover:text-gray-800 dark:text-gray-400" 
+                          title="Editar asistencia"
+                        >
+                          <span className="material-symbols-outlined text-lg" translate="no">edit</span>
                         </Link>
-                        <button onClick={() => handleDelete(h.schedule_id, h.date, h.schedule_name)} className="text-red-600 hover:text-red-800" title="Eliminar registro">
-                          <span className="material-symbols-outlined text-lg">delete</span>
+                        <button 
+                          onClick={() => handleDelete(h.schedule_id, h.date, h.schedule_name)} 
+                          className="text-red-600 hover:text-red-800" 
+                          title="Eliminar registro"
+                        >
+                          <span className="material-symbols-outlined text-lg" translate="no">delete</span>
                         </button>
                       </div>
                     </td>
@@ -434,7 +530,7 @@ export default function Historial() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">{sessionDetail.date} • {sessionDetail.schedule?.start_time} - {sessionDetail.schedule?.end_time}</p>
               </div>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
-                <span className="material-symbols-outlined">close</span>
+                <span className="material-symbols-outlined" translate="no">close</span>
               </button>
             </div>
             <div className="p-6 overflow-y-auto max-h-[60vh]">
@@ -483,7 +579,7 @@ export default function Historial() {
           <div className="bg-white dark:bg-gray-dark rounded-xl shadow-xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
-                <span className="material-symbols-outlined text-red-600 dark:text-red-400">warning</span>
+                <span className="material-symbols-outlined text-red-600 dark:text-red-400" translate="no">warning</span>
               </div>
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Confirmar eliminación</h3>

@@ -1,3 +1,10 @@
+/**
+ * @module Registro de Asistencia
+ * @description Página para registrar y editar la asistencia de participantes.
+ * Permite seleccionar una sesión programada, una fecha y marcar el estado
+ * de asistencia (presente/ausente) para cada participante.
+ */
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -8,6 +15,9 @@ import type { Schedule, Participant, Program } from '@/types/attendance';
 import { Alert } from '@/components/ui-elements/alert';
 import { Button } from '@/components/ui-elements/button';
 
+/**
+ * Componente de carga con spinner animado.
+ */
 function Loading() {
   return (
     <div className="flex items-center justify-center py-12">
@@ -16,25 +26,36 @@ function Loading() {
   );
 }
 
+/**
+ * Página principal de registro de asistencia.
+ * Soporta modo de creación y modo de edición de asistencia existente.
+ */
 export default function Registro() {
   const searchParams = useSearchParams();
+  
+  // Estado de datos
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [allParticipants, setAllParticipants] = useState<Participant[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  
+  // Estado de UI
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentProgram, setCurrentProgram] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Estado de alertas
   const [showAlert, setShowAlert] = useState(false);
   const [alertVariant, setAlertVariant] = useState<'success' | 'error' | 'warning'>('success');
   const [alertTitle, setAlertTitle] = useState('');
   const [alertDescription, setAlertDescription] = useState('');
 
-  // Si viene de una sesión específica, no mostrar selectores
+  // Detectar si viene de una sesión preseleccionada
   const hasPreselectedSession = searchParams.get('session') !== null;
 
+  // Estado del formulario
   const [selectedSchedule, setSelectedSchedule] = useState(searchParams.get('session') || '');
   const [selectedDate, setSelectedDate] = useState(() => {
     const urlDate = searchParams.get('date');
@@ -44,6 +65,9 @@ export default function Registro() {
   });
   const [attendance, setAttendance] = useState<Record<string, string>>({});
 
+  /**
+   * Dispara una alerta visual en la interfaz.
+   */
   const triggerAlert = (
     variant: 'success' | 'error' | 'warning',
     title: string,
@@ -63,7 +87,9 @@ export default function Registro() {
     loadData();
   }, []);
 
-  // Recargar participantes cuando la página vuelve a estar visible
+  /**
+   * Effect para recargar participantes cuando la página vuelve a estar visible.
+   */
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && currentProgram) {
@@ -77,16 +103,18 @@ export default function Registro() {
     };
   }, [currentProgram]);
 
+  /**
+   * Effect para cargar asistencia existente o inicializar estados.
+   */
   useEffect(() => {
     const sessionParam = searchParams.get('session');
     const dateParam = searchParams.get('date');
 
-    // Solo cargar asistencia si hay participantes y el estado de attendance está vacío
     if (participants.length > 0 && Object.keys(attendance).length === 0) {
       if (sessionParam && dateParam) {
         loadExistingAttendance(sessionParam, dateParam);
       } else {
-        // Inicializar con PRESENT solo si no hay nada cargado
+        // Inicializar todos como PRESENT por defecto
         const initial: Record<string, string> = {};
         participants.forEach(p => {
           initial[p.id] = 'PRESENT';
@@ -96,10 +124,14 @@ export default function Registro() {
     }
   }, [participants]);
 
+  /**
+   * Carga la asistencia existente para edición.
+   * @param scheduleId - ID del horario
+   * @param date - Fecha de la sesión
+   */
   const loadExistingAttendance = async (scheduleId: string, date: string) => {
     if (!scheduleId) return;
     try {
-      // Usar el endpoint general de history con filtros ya que el endpoint específico no funciona
       const res = await attendanceService.getHistory(date, date, scheduleId);
       const allRecords = res.data.data || [];
 
@@ -108,9 +140,7 @@ export default function Registro() {
         const existingAttendance: Record<string, string> = {};
 
         allRecords.forEach((r: any) => {
-          // Normalizar el ID del participante
           const participantId = r.participant?.external_id || r.participant?.id || r.participant_id || r.participantId;
-          // Normalizar el estado (convertir a mayúsculas)
           const status = (r.status || r.attendance_status || 'present').toUpperCase();
 
           if (participantId) {
@@ -118,7 +148,7 @@ export default function Registro() {
           }
         });
 
-        // Para participantes que no tienen registro, usar PRESENT por defecto
+        // Participantes sin registro = PRESENT por defecto
         participants.forEach(p => {
           if (!existingAttendance[p.id]) {
             existingAttendance[p.id] = 'PRESENT';
@@ -134,6 +164,7 @@ export default function Registro() {
         setAttendance(initial);
       }
     } catch (error) {
+      // Error al cargar - inicializar por defecto
       const initial: Record<string, string> = {};
       participants.forEach(p => {
         initial[p.id] = 'PRESENT';
@@ -142,15 +173,19 @@ export default function Registro() {
     }
   };
 
+  /**
+   * Carga inicial de datos: horarios y participantes.
+   */
   const loadData = async () => {
     try {
-      // First, load all schedules
       const schedulesRes = await attendanceService.getSchedules();
 
+      // Mapeo de días inglés a español
       const dayMap: Record<string, string> = {
         'monday': 'LUNES', 'tuesday': 'MARTES', 'wednesday': 'MIERCOLES',
         'thursday': 'JUEVES', 'friday': 'VIERNES', 'saturday': 'SABADO', 'sunday': 'DOMINGO'
       };
+      
       const rawSchedules = schedulesRes.data.data || [];
       const normalizedSchedules = rawSchedules.map((s: any) => ({
         ...s,
@@ -164,26 +199,29 @@ export default function Registro() {
       }));
       setSchedules(normalizedSchedules);
 
-      // If there's a preselected session, load participants for that schedule's program
+      // Si hay sesión preseleccionada, cargar participantes del programa
       const sessionId = searchParams.get('session');
       if (sessionId) {
         const selectedSched = normalizedSchedules.find((s: Schedule) => String(s.id) === sessionId);
         if (selectedSched?.program) {
           await loadParticipantsByProgram(selectedSched.program);
         } else {
-          // Fallback: load all participants if no program
           await loadParticipantsByProgram();
         }
       } else {
-        // No preselection - don't load participants yet
         setParticipants([]);
       }
     } catch (error) {
+      // Error silencioso
     } finally {
       setLoading(false);
     }
   };
 
+  /**
+   * Carga participantes filtrados por programa.
+   * @param program - Nombre del programa (opcional)
+   */
   const loadParticipantsByProgram = async (program?: string) => {
     try {
       const participantsRes = await attendanceService.getParticipantsByProgram(program);
@@ -209,10 +247,12 @@ export default function Registro() {
     }
   };
 
+  /**
+   * Recarga la lista de participantes manteniendo el estado de asistencia.
+   */
   const refreshParticipants = async () => {
     setRefreshing(true);
     try {
-      // Load participants - filtered by program if available, otherwise all
       const participantsRes = await attendanceService.getParticipantsByProgram(currentProgram || undefined);
       const rawParticipants = participantsRes.data.data || [];
       const normalizedParticipants = rawParticipants.map((p: any) => {
@@ -225,8 +265,7 @@ export default function Registro() {
         };
       }) as Participant[];
 
-      // Mantener el estado de asistencia de los participantes existentes
-      // y agregar los nuevos con estado 'PRESENT' por defecto
+      // Mantener estado de asistencia existente, nuevos = PRESENT
       const newAttendance = { ...attendance };
       normalizedParticipants.forEach(p => {
         if (!(p.id in newAttendance)) {
@@ -238,11 +277,15 @@ export default function Registro() {
       setParticipants(normalizedParticipants);
       setAttendance(newAttendance);
     } catch (error) {
+      // Error silencioso
     } finally {
       setRefreshing(false);
     }
   };
 
+  /**
+   * Actualiza el estado de asistencia de un participante.
+   */
   const handleStatusChange = (participantId: string, status: string) => {
     setAttendance(prev => ({
       ...prev,
@@ -250,6 +293,10 @@ export default function Registro() {
     }));
   };
 
+  /**
+   * Marca todos los participantes con el mismo estado.
+   * @param status - Estado a aplicar (PRESENT/ABSENT)
+   */
   const markAll = (status: string) => {
     const newAttendance: Record<string, string> = {};
     participants.forEach(p => {
@@ -258,6 +305,9 @@ export default function Registro() {
     setAttendance(newAttendance);
   };
 
+  /**
+   * Procesa y envía el registro de asistencia al servidor.
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -276,7 +326,7 @@ export default function Registro() {
     try {
       const records = Object.entries(attendance).map(([participantId, status]) => ({
         participant_external_id: participantId,
-        status: status.toLowerCase() // Backend espera minúsculas: present, absent, justified
+        status: status.toLowerCase()
       }));
 
       const requestData = {
@@ -349,7 +399,7 @@ export default function Registro() {
         {/* Session Selection - Solo mostrar selectores si no viene preseleccionada */}
         <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <span className="material-symbols-outlined text-blue-800">event</span>
+            <span className="material-symbols-outlined text-blue-800" translate="no">event</span>
             Información de la Sesión
           </h2>
 
@@ -357,7 +407,7 @@ export default function Registro() {
             // Vista simplificada cuando viene de sesiones
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-blue-600">schedule</span>
+                <span className="material-symbols-outlined text-blue-600" translate="no">schedule</span>
                 <div>
                   <p className="font-semibold text-blue-800 dark:text-blue-300">{selectedScheduleData.name}</p>
                   <p className="text-sm text-blue-600 dark:text-blue-400">
@@ -373,7 +423,7 @@ export default function Registro() {
             // Mensaje para seleccionar desde Dashboard
             <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
               <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-yellow-600">info</span>
+                <span className="material-symbols-outlined text-yellow-600" translate="no">info</span>
                 <div>
                   <p className="font-medium text-yellow-800 dark:text-yellow-300">Selecciona una sesión desde el Dashboard</p>
                   <p className="text-sm text-yellow-600 dark:text-yellow-400">
@@ -390,7 +440,7 @@ export default function Registro() {
           <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-800">groups</span>
+                <span className="material-symbols-outlined text-blue-800" translate="no">groups</span>
                 Lista de Participantes ({participants.length})
               </h2>
               {currentProgram && (
@@ -465,7 +515,7 @@ export default function Registro() {
               variant="primary"
               shape="rounded"
               className="w-full sm:w-auto !bg-blue-800 hover:!bg-blue-900"
-              icon={saving ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : <span className="material-symbols-outlined">save</span>}
+              icon={saving ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : <span className="material-symbols-outlined" translate="no">save</span>}
             />
           </div>
         </div>

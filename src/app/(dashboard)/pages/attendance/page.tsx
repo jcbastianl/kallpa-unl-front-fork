@@ -1,3 +1,12 @@
+/**
+ * Módulo de Gestión de Asistencia - Dashboard Principal
+ * 
+ * Este componente muestra el panel principal de asistencia con:
+ * - Estadísticas del día (sesiones, participantes activos)
+ * - Sesiones programadas para hoy
+ * - Próximas sesiones de la semana
+ * - Funcionalidad para editar y eliminar sesiones
+ */
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -9,13 +18,17 @@ import ErrorMessage from '@/components/FormElements/errormessage';
 import { Button } from '@/components/ui-elements/button';
 import { Select } from '@/components/FormElements/select';
 import InputGroup from '@/components/FormElements/InputGroup';
+import { parseDate } from '@/lib/utils';
 
+/**
+ * Componente de tarjeta de estadísticas
+ */
 function StatCard({ icon, iconBg, label, value }: { icon: string; iconBg: string; label: string; value: string | number }) {
   return (
     <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-3">
         <div className={`${iconBg} p-2 rounded-lg`}>
-          <span className="material-symbols-outlined">{icon}</span>
+          <span className="material-symbols-outlined" translate="no">{icon}</span>
         </div>
         <div>
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">{label}</p>
@@ -26,6 +39,9 @@ function StatCard({ icon, iconBg, label, value }: { icon: string; iconBg: string
   );
 }
 
+/**
+ * Componente de carga
+ */
 function Loading() {
   return (
     <div className="flex items-center justify-center py-12">
@@ -34,7 +50,12 @@ function Loading() {
   );
 }
 
+/**
+ * Dashboard principal de asistencia
+ * Gestiona la visualización de sesiones del día y próximas
+ */
 export default function DashboardAsistencia() {
+  // Estados para datos
   const [sessions, setSessions] = useState<Session[]>([]);
   const [todaySchedules, setTodaySchedules] = useState<Schedule[]>([]);
   const [upcomingSessions, setUpcomingSessions] = useState<Schedule[]>([]);
@@ -42,8 +63,12 @@ export default function DashboardAsistencia() {
   const [todayHistory, setTodayHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate] = useState(new Date());
+  
+  // Estados para edición de sesiones
   const [editingSession, setEditingSession] = useState<Schedule | null>(null);
   const [programs, setPrograms] = useState<Program[]>([]);
+  
+  // Estados para alertas y confirmaciones
   const [showAlert, setShowAlert] = useState(false);
   const [alertVariant, setAlertVariant] = useState<'success' | 'error' | 'warning'>('success');
   const [alertTitle, setAlertTitle] = useState('');
@@ -51,6 +76,8 @@ export default function DashboardAsistencia() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<{ id: string | number, name: string } | null>(null);
   const [editEndDateError, setEditEndDateError] = useState<string>('');
+  
+  // Opciones de colores para programas
   const PROGRAM_COLORS = [
     { value: '#3B82F6', label: 'Azul' },
     { value: '#10B981', label: 'Verde' },
@@ -63,6 +90,12 @@ export default function DashboardAsistencia() {
   ];
   const [deleting, setDeleting] = useState<string | number | null>(null);
 
+  /**
+   * Dispara una alerta visual en la interfaz
+   * @param variant - Tipo de alerta: success, error o warning
+   * @param title - Título de la alerta
+   * @param description - Descripción detallada
+   */
   const triggerAlert = (
     variant: 'success' | 'error' | 'warning',
     title: string,
@@ -78,16 +111,21 @@ export default function DashboardAsistencia() {
     }, 5000);
   };
 
-  // Fixed program options
+  // Opciones de programa disponibles
   const PROGRAM_OPTIONS = [
     { value: 'INICIACION', label: 'Iniciación' },
     { value: 'FUNCIONAL', label: 'Funcional' },
   ];
 
+  /**
+   * Effect para cargar datos iniciales y configurar actualizaciones automáticas.
+   * - Carga datos al montar el componente
+   * - Recarga al volver a la pestaña (visibilitychange)
+   * - Actualización periódica cada 30 segundos
+   */
   useEffect(() => {
     loadData();
 
-    // Recargar datos cuando la página se vuelve visible (cuando vuelve del registro)
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         loadData();
@@ -96,7 +134,6 @@ export default function DashboardAsistencia() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Recargar datos cada 30 segundos para mantener actualizado
     const interval = setInterval(() => {
       loadData();
     }, 30000);
@@ -107,9 +144,12 @@ export default function DashboardAsistencia() {
     };
   }, []);
 
+  /**
+   * Carga todos los datos necesarios para el dashboard.
+   * Obtiene historial del día, participantes y horarios programados.
+   */
   const loadData = async () => {
     try {
-      // Obtener fecha de hoy en formato YYYY-MM-DD
       const today = new Date();
       const todayStr = today.toISOString().split('T')[0];
 
@@ -118,23 +158,20 @@ export default function DashboardAsistencia() {
         const historyRes = await attendanceService.getHistory(todayStr, todayStr);
         historyData = historyRes.data.data || [];
       } catch (error) {
+        // Error silencioso - historial puede estar vacío
       }
 
       const [participantsRes, schedulesRes] = await Promise.all([
         attendanceService.getParticipants(),
         attendanceService.getSchedules(),
       ]);
-      const sessionsData: any[] = [];
+
       const sessionsFromBackend: Session[] = [];
       setSessions(sessionsFromBackend);
       setParticipants(participantsRes.data.data || []);
-
       setTodayHistory(historyData);
 
-      // Obtener todos los schedules
       const schedules = schedulesRes.data.data || [];
-
-      // Obtener sesiones de hoy basándose en los schedules
       const todaySessions = getTodaySessions(schedules);
       setTodaySchedules(todaySessions);
 
@@ -142,18 +179,23 @@ export default function DashboardAsistencia() {
       setUpcomingSessions(upcoming);
 
     } catch (error) {
+      // Error silencioso - se maneja en la UI
     } finally {
       setLoading(false);
     }
   };
 
-  // Función para normalizar día (quitar acentos y pasar a minúsculas)
+  /**
+   * Normaliza un nombre de día eliminando acentos y convirtiendo a minúsculas.
+   * @param day - Nombre del día a normalizar
+   * @returns Día normalizado
+   */
   const normalizeDay = (day: string): string => {
     if (!day) return '';
     return day.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   };
 
-  // Mapeo de días a español
+  // Mapeo de días en inglés/español normalizado a español con formato
   const dayToSpanish: Record<string, string> = {
     'monday': 'Lunes', 'tuesday': 'Martes', 'wednesday': 'Miércoles',
     'thursday': 'Jueves', 'friday': 'Viernes', 'saturday': 'Sábado', 'sunday': 'Domingo',
@@ -161,13 +203,13 @@ export default function DashboardAsistencia() {
     'jueves': 'Jueves', 'viernes': 'Viernes', 'sabado': 'Sábado', 'domingo': 'Domingo'
   };
 
-  // Función para parsear fecha en formato YYYY-MM-DD
-  const parseDate = (dateStr: string): Date => {
-    const [year, month, day] = dateStr.split('-').map(Number);
-    return new Date(year, month - 1, day, 12, 0, 0);
-  };
-
-  // Obtener las sesiones de hoy basándose en los schedules
+  /**
+   * Filtra los horarios para obtener solo las sesiones programadas para hoy.
+   * Considera tanto sesiones recurrentes (por día de semana) como sesiones con fecha específica.
+   * Valida que las sesiones estén dentro de su rango de fechas válido.
+   * @param schedules - Lista de todos los horarios
+   * @returns Horarios válidos para hoy
+   */
   const getTodaySessions = (schedules: Schedule[]) => {
     const daysMap: Record<string, number> = {
       'domingo': 0, 'sunday': 0,
@@ -189,17 +231,17 @@ export default function DashboardAsistencia() {
       const specificDate = (schedule as any).specific_date || (schedule as any).specificDate;
 
       if (specificDate) {
-        // Sesión con fecha específica - verificar si es hoy
+        // Sesión con fecha específica
         if (specificDate === todayStr) {
           todaySessions.push(schedule);
         }
       } else {
-        // Sesión recurrente - verificar si el día coincide con hoy
+        // Sesión recurrente por día de semana
         const dayName = normalizeDay((schedule as any).day_of_week || (schedule as any).dayOfWeek || '');
         const scheduleDay = daysMap[dayName];
 
         if (scheduleDay === todayDay) {
-          // Validar que hoy esté dentro del rango start_date - end_date
+          // Validar rango de fechas
           const startDateStr = (schedule as any).start_date || (schedule as any).startDate;
           const endDateStr = (schedule as any).end_date || (schedule as any).endDate;
 
@@ -231,7 +273,12 @@ export default function DashboardAsistencia() {
     return todaySessions;
   };
 
-  // Obtener las próximas sesiones de la semana
+  /**
+   * Obtiene las próximas sesiones programadas para los siguientes 7 días.
+   * Excluye las sesiones de hoy y sesiones expiradas.
+   * @param schedules - Lista de todos los horarios
+   * @returns Sesiones próximas ordenadas por fecha
+   */
   const getUpcomingSessions = (schedules: Schedule[]) => {
     const daysMap: Record<string, number> = {
       'domingo': 0, 'sunday': 0,
@@ -314,15 +361,25 @@ export default function DashboardAsistencia() {
       }
     });
 
-    // Ordenar por fecha más cercana
+    // Ordenar por fecha más cercana y limitar a 6 resultados
     return upcoming.sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime()).slice(0, 6);
   };
 
+  /**
+   * Inicia el proceso de eliminación de una sesión.
+   * Muestra el modal de confirmación antes de eliminar.
+   * @param sessionId - ID de la sesión a eliminar
+   * @param sessionName - Nombre de la sesión para mostrar en confirmación
+   */
   const handleDelete = async (sessionId: string | number, sessionName: string) => {
     setSessionToDelete({ id: sessionId, name: sessionName });
     setShowConfirmDelete(true);
   };
 
+  /**
+   * Confirma y ejecuta la eliminación de la sesión.
+   * Actualiza el estado local y recarga los datos del servidor.
+   */
   const confirmDelete = async () => {
     if (!sessionToDelete) return;
 
@@ -330,7 +387,6 @@ export default function DashboardAsistencia() {
     setShowConfirmDelete(false);
     try {
       await attendanceService.deleteSchedule(String(sessionToDelete.id));
-      // Eliminar de todas las listas
       setUpcomingSessions(prev => prev.filter(s => (s.external_id || s.id) !== sessionToDelete.id));
       setTodaySchedules(prev => prev.filter(s => ((s as any).external_id || s.id) !== sessionToDelete.id));
       triggerAlert(
@@ -338,7 +394,7 @@ export default function DashboardAsistencia() {
         'Sesión eliminada',
         `La sesión "${sessionToDelete.name}" se ha eliminado correctamente.`
       );
-      loadData(); // Recargar todos los datos
+      loadData();
     } catch (error) {
       triggerAlert(
         'error',
@@ -351,10 +407,18 @@ export default function DashboardAsistencia() {
     }
   };
 
+  /**
+   * Prepara una sesión para edición cargando sus datos en el formulario.
+   * @param session - Sesión a editar
+   */
   const handleEdit = (session: Schedule) => {
     setEditingSession({ ...session });
   };
 
+  /**
+   * Procesa y guarda los cambios de edición de una sesión.
+   * Valida fechas y envía la actualización al servidor.
+   */
   const handleSaveEdit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingSession) return;
@@ -362,6 +426,7 @@ export default function DashboardAsistencia() {
     const formData = new FormData(e.currentTarget);
     const sessionId = editingSession.external_id || editingSession.id;
 
+    // Mapeo de días español/inglés a formato de API
     const dayMap: Record<string, string> = {
       'lunes': 'MONDAY', 'martes': 'TUESDAY', 'miércoles': 'WEDNESDAY', 'miercoles': 'WEDNESDAY',
       'jueves': 'THURSDAY', 'viernes': 'FRIDAY', 'sábado': 'SATURDAY', 'sabado': 'SATURDAY', 'domingo': 'SUNDAY',
@@ -491,7 +556,7 @@ export default function DashboardAsistencia() {
       <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
         <div className="p-6 border-b border-gray-100 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <span className="material-symbols-outlined text-blue-800">today</span>
+            <span className="material-symbols-outlined text-blue-800" translate="no">today</span>
             Sesiones de Hoy
             <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
               {formatShortDate(currentDate)}
@@ -617,7 +682,7 @@ export default function DashboardAsistencia() {
       <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
         <div className="p-6 border-b border-gray-100 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <span className="material-symbols-outlined text-purple-600">upcoming</span>
+            <span className="material-symbols-outlined text-purple-600" translate="no">upcoming</span>
             Próximas Sesiones
           </h2>
         </div>
@@ -711,7 +776,7 @@ export default function DashboardAsistencia() {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Editar Sesión</h2>
                 <button onClick={() => setEditingSession(null)} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                  <span className="material-symbols-outlined">close</span>
+                  <span className="material-symbols-outlined" translate="no">close</span>
                 </button>
               </div>
               {/* Badge indicando tipo de sesión */}
@@ -720,7 +785,7 @@ export default function DashboardAsistencia() {
                   ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
                   : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                   }`}>
-                  <span className="material-symbols-outlined text-sm">
+                  <span className="material-symbols-outlined text-sm" translate="no">
                     {editingSession.is_recurring === false || editingSession.specific_date ? 'event' : 'repeat'}
                   </span>
                   {editingSession.is_recurring === false || editingSession.specific_date ? 'Fecha específica' : 'Sesión recurrente'}
@@ -851,7 +916,7 @@ export default function DashboardAsistencia() {
           <div className="bg-white dark:bg-gray-dark rounded-xl shadow-xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
-                <span className="material-symbols-outlined text-red-600 dark:text-red-400">warning</span>
+                <span className="material-symbols-outlined text-red-600 dark:text-red-400" translate="no">warning</span>
               </div>
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Confirmar eliminación</h3>

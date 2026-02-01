@@ -36,7 +36,7 @@ export default function ProgramasPage() {
   const [alertTitle, setAlertTitle] = useState('');
   const [alertDescription, setAlertDescription] = useState('');
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-  const [programToDelete, setProgramToDelete] = useState<{id: string, name: string} | null>(null);
+  const [programToDelete, setProgramToDelete] = useState<{ id: string, name: string } | null>(null);
 
   // Estado para ver participantes de un programa
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
@@ -100,17 +100,9 @@ export default function ProgramasPage() {
     setFormData({ name: '', description: '', color: '#3B82F6' });
   };
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
-      triggerAlert(
-        'warning',
-        'Campo requerido',
-        'El nombre del programa es obligatorio.'
-      );
-      return;
-    }
-
     setSaving(true);
     try {
       if (editingProgram) {
@@ -130,12 +122,21 @@ export default function ProgramasPage() {
       }
       handleCloseModal();
       loadPrograms();
-    } catch (error) {
-      triggerAlert(
-        'error',
-        'Error al guardar',
-        'No se pudo guardar el programa. Intenta nuevamente.'
-      );
+    } catch (error: any) {
+      if (error?.response?.data && typeof error.response.data === 'object') {
+        const errorData = error.response.data;
+        triggerAlert(
+          'error',
+          'Error al guardar',
+          errorData.message || errorData.msg || 'No se pudo guardar el programa. Intenta nuevamente.'
+        );
+      } else {
+        triggerAlert(
+          'error',
+          'Error al guardar',
+          'No se pudo guardar el programa. Intenta nuevamente.'
+        );
+      }
     } finally {
       setSaving(false);
     }
@@ -214,7 +215,7 @@ export default function ProgramasPage() {
           onClick={() => handleOpenModal()}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm hover:shadow transition-all"
         >
-          <span className="material-symbols-outlined text-xl">add</span>
+          <span className="material-symbols-outlined text-xl" translate="no">add</span>
           Nuevo Programa
         </button>
       </div>
@@ -233,7 +234,7 @@ export default function ProgramasPage() {
       {/* Programs Grid */}
       {programs.length === 0 ? (
         <div className="bg-white dark:bg-gray-dark rounded-xl p-12 text-center border border-gray-100 dark:border-gray-700">
-          <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4">
+          <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4" translate="no">
             folder_open
           </span>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -246,7 +247,7 @@ export default function ProgramasPage() {
             onClick={() => handleOpenModal()}
             className="inline-flex items-center gap-2 bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors"
           >
-            <span className="material-symbols-outlined">add</span>
+            <span className="material-symbols-outlined" translate="no">add</span>
             Crear Programa
           </button>
         </div>
@@ -293,7 +294,7 @@ export default function ProgramasPage() {
                 <div className="flex gap-6 py-4 border-y border-gray-100 dark:border-gray-700">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 text-lg">group</span>
+                      <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 text-lg" translate="no">group</span>
                     </div>
                     <div>
                       <p className="text-lg font-semibold text-gray-900 dark:text-white">{program.participants_count || 0}</p>
@@ -302,7 +303,7 @@ export default function ProgramasPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-lg">calendar_month</span>
+                      <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-lg" translate="no">calendar_month</span>
                     </div>
                     <div>
                       <p className="text-lg font-semibold text-gray-900 dark:text-white">{program.schedules_count || 0}</p>
@@ -321,14 +322,14 @@ export default function ProgramasPage() {
                       color: program.color || '#3B82F6'
                     }}
                   >
-                    <span className="material-symbols-outlined text-lg">visibility</span>
+                    <span className="material-symbols-outlined text-lg" translate="no">visibility</span>
                     Ver
                   </button>
                   <button
                     onClick={() => handleOpenModal(program)}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-lg">edit</span>
+                    <span className="material-symbols-outlined text-lg" translate="no">edit</span>
                     Editar
                   </button>
                   <button
@@ -337,9 +338,9 @@ export default function ProgramasPage() {
                     className="px-3 py-2.5 text-sm font-medium text-red-500 bg-red-50 dark:bg-red-900/20 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
                   >
                     {deleting === program.external_id ? (
-                      <span className="material-symbols-outlined text-lg animate-spin">refresh</span>
+                      <span className="material-symbols-outlined text-lg animate-spin" translate="no">refresh</span>
                     ) : (
-                      <span className="material-symbols-outlined text-lg">delete</span>
+                      <span className="material-symbols-outlined text-lg" translate="no">delete</span>
                     )}
                   </button>
                 </div>
@@ -368,7 +369,6 @@ export default function ProgramasPage() {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
                   placeholder="Ej: Actividad Física Adultos"
                   className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
                 />
@@ -398,8 +398,8 @@ export default function ProgramasPage() {
                       type="button"
                       onClick={() => setFormData({ ...formData, color: color.value })}
                       className={`w-10 h-10 rounded-lg transition-all ${formData.color === color.value
-                          ? 'ring-2 ring-offset-2 ring-gray-400 dark:ring-offset-gray-800'
-                          : 'hover:scale-110'
+                        ? 'ring-2 ring-offset-2 ring-gray-400 dark:ring-offset-gray-800'
+                        : 'hover:scale-110'
                         }`}
                       style={{ backgroundColor: color.value }}
                     />
@@ -420,7 +420,7 @@ export default function ProgramasPage() {
                   disabled={saving}
                   className="flex-1 px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {saving && <span className="material-symbols-outlined animate-spin text-lg">refresh</span>}
+                  {saving && <span className="material-symbols-outlined animate-spin text-lg" translate="no">refresh</span>}
                   {editingProgram ? 'Guardar' : 'Crear'}
                 </button>
               </div>
@@ -446,7 +446,7 @@ export default function ProgramasPage() {
                 onClick={handleCloseParticipants}
                 className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
-                <span className="material-symbols-outlined">close</span>
+                <span className="material-symbols-outlined" translate="no">close</span>
               </button>
             </div>
 
@@ -455,7 +455,7 @@ export default function ProgramasPage() {
                 <Loading />
               ) : programParticipants.length === 0 ? (
                 <div className="text-center py-8">
-                  <span className="material-symbols-outlined text-5xl text-gray-300 dark:text-gray-600 mb-3">
+                  <span className="material-symbols-outlined text-5xl text-gray-300 dark:text-gray-600 mb-3" translate="no">
                     group_off
                   </span>
                   <p className="text-gray-500 dark:text-gray-400">
@@ -470,7 +470,7 @@ export default function ProgramasPage() {
                       className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
                     >
                       <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                        <span className="material-symbols-outlined text-blue-600">person</span>
+                        <span className="material-symbols-outlined text-blue-600" translate="no">person</span>
                       </div>
                       <div className="flex-1">
                         <p className="font-medium text-gray-900 dark:text-white">
@@ -483,8 +483,8 @@ export default function ProgramasPage() {
                         )}
                       </div>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${participant.status === 'active' || participant.status === 'ACTIVO'
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
                         }`}>
                         {participant.status === 'active' || participant.status === 'ACTIVO' ? 'Activo' : participant.status}
                       </span>
@@ -503,7 +503,7 @@ export default function ProgramasPage() {
           <div className="bg-white dark:bg-gray-dark rounded-xl shadow-xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
-                <span className="material-symbols-outlined text-red-600 dark:text-red-400">warning</span>
+                <span className="material-symbols-outlined text-red-600 dark:text-red-400" translate="no">warning</span>
               </div>
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Confirmar eliminación</h3>

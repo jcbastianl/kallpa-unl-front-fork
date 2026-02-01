@@ -8,12 +8,16 @@ interface DatePickerTwoProps {
   value?: string;
   onChange?: (newDate: string) => void;
   label?: string;
+  minDate?: string; // Fecha mínima permitida (formato YYYY-MM-DD)
+  disabled?: boolean; // Desactivar el selector
 }
 
 const DatePickerTwo: React.FC<DatePickerTwoProps> = ({
   value,
   onChange,
   label,
+  minDate,
+  disabled = false,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -22,10 +26,12 @@ const DatePickerTwo: React.FC<DatePickerTwoProps> = ({
 
     const fp = flatpickr(inputRef.current, {
       mode: "single",
-      static: true,
+      static: false, // Cambiar a false para que sea popup
       monthSelectorType: "static",
       dateFormat: "Y-m-d", // formato ISO
       defaultDate: value || undefined,
+      minDate: minDate || undefined, // Aplicar fecha mínima si se proporciona
+      appendTo: document.body, // Append al body para evitar problemas de z-index
       onChange: (selectedDates) => {
         if (onChange && selectedDates.length > 0) {
           const dateStr = selectedDates[0].toISOString().split("T")[0];
@@ -35,7 +41,7 @@ const DatePickerTwo: React.FC<DatePickerTwoProps> = ({
     });
 
     return () => fp.destroy();
-  }, [value, onChange]);
+  }, [value, onChange, minDate]);
 
   return (
     <div>
@@ -45,7 +51,8 @@ const DatePickerTwo: React.FC<DatePickerTwoProps> = ({
       <div className="relative">
         <input
           ref={inputRef}
-          className="form-datepicker w-full rounded-[7px] border-[1.5px] border-stroke bg-transparent px-5 py-3 font-normal outline-none transition focus:border-primary active:border-primary dark:border-dark-3 dark:bg-dark-2 dark:focus:border-primary"
+          disabled={disabled}
+          className="form-datepicker w-full rounded-[7px] border-[1.5px] border-stroke bg-transparent px-5 py-3 font-normal outline-none transition focus:border-primary active:border-primary dark:border-dark-3 dark:bg-dark-2 dark:focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
           placeholder="yyyy-mm-dd"
         />
 
