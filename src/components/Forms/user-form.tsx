@@ -71,19 +71,6 @@ export const UserForm = () => {
     e.preventDefault();
     setErrors({});
 
-    // Manual validation
-    const newErrors: Record<string, string> = {};
-    if (!formData.firstName) newErrors.firstName = "El nombre es obligatorio";
-    if (!formData.lastName) newErrors.lastName = "El apellido es obligatorio";
-    if (!formData.dni) newErrors.dni = "La cédula es obligatoria";
-    if (!formData.email) newErrors.email = "El correo electrónico es obligatorio";
-    if (!formData.password) newErrors.password = "La contraseña es obligatoria";
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
     try {
       const payload: CreateUserRequest = {
         firstName: formData.firstName,
@@ -111,29 +98,32 @@ export const UserForm = () => {
         role: "",
       });
     } catch (err: any) {
-      if (!err.response) {
-        console.error("No response from server", err);
+      if (err?.type === "SERVER_DOWN") {
+        window.dispatchEvent(
+          new CustomEvent("SERVER_DOWN", {
+            detail: {
+              message:
+                "No se puede conectar con el servidor. Por favor intenta nuevamente más tarde.",
+            },
+          }),
+        );
+        return;
+      }
+      if (err?.data && typeof err.data === "object") {
+        setErrors(err.data);
         return;
       }
 
-      const response = err.response?.data || err;
-
-      if (response && response.status === "error") {
-        const errorSource = response.data?.validation_errors || response.data;
-
-        if (errorSource && typeof errorSource === "object") {
-          const fieldErrors: Record<string, string> = {};
-          Object.entries(errorSource).forEach(([key, value]) => {
-            if (typeof value === "string") {
-              fieldErrors[key] = value;
-            }
-          });
-          setErrors(fieldErrors);
-          return;
-        }
+      if (err?.msg || err?.message) {
+        showTemporaryAlert(
+          "error",
+          "Error",
+          err.msg || err.message
+        );
+        return;
       }
 
-      showTemporaryAlert("error", "Error", response?.msg || response?.message || "Error al registrar usuario");
+      showTemporaryAlert("error", "Error", "Error al registrar usuario");
     }
   };
 
@@ -220,7 +210,6 @@ export const UserForm = () => {
               iconPosition="left"
               icon={<FiMapPin className="text-gray-400" size={18} />}
             />
-            <ErrorMessage message={errors.address} />
           </div>
 
           <div className="mb-4.5 grid grid-cols-1 gap-6 xl:grid-cols-2">

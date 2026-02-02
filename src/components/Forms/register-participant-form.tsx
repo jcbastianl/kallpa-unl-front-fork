@@ -136,23 +136,6 @@ export const RegisterParticipantForm = ({ participantId }: RegisterParticipantFo
     setSubmitting(true);
     setErrors({});
 
-    // Validación de campos requeridos antes de enviar
-    const validationErrors: Record<string, string> = {};
-
-    if (!formData.type || formData.type === "") {
-      validationErrors.type = "Debe seleccionar un tipo de participante";
-    }
-
-    if (!formData.program || formData.program === "") {
-      validationErrors.program = "Debe seleccionar un programa";
-    }
-
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      setSubmitting(false);
-      return;
-    }
-
     const isMinor = Number(formData.age) > 0 && Number(formData.age) < 18;
     if (isMinor && formData.program === "FUNCIONAL") {
       setErrors((prev) => ({
@@ -236,21 +219,36 @@ export const RegisterParticipantForm = ({ participantId }: RegisterParticipantFo
         });
       }
     } catch (err: any) {
-      if (err?.data && typeof err.data === "object") {
-        setErrors(err.data);
-        const hasFieldErrors = Object.keys(err.data).some(
-          (key) => key !== "general" && err.data[key],
+      if (err?.type === "SERVER_DOWN") {
+        window.dispatchEvent(
+          new CustomEvent("SERVER_DOWN", {
+            detail: {
+              message:
+                "No se puede conectar con el servidor. Por favor intenta nuevamente más tarde.",
+            },
+          }),
         );
-        if (!hasFieldErrors && err.msg) {
-          triggerAlert("error", "Error", err.msg);
-        }
-      } else {
+        return;
+      }
+      if (err?.code === 400 && err?.data) {
+        setErrors(err.data);
+        return;
+      }
+
+      if (err?.msg) {
         triggerAlert(
           "error",
           isEditMode ? "Error al actualizar" : "Error al registrar",
-          isEditMode ? "No se pudo actualizar el participante." : "No se pudo registrar el participante.",
+          err.msg
         );
+        return;
       }
+
+      triggerAlert(
+        "error",
+        isEditMode ? "Error al actualizar" : "Error al registrar",
+        "Ocurrió un error inesperado. Intenta nuevamente."
+      );
     } finally {
       setSubmitting(false);
     }
