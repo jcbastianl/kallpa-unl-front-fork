@@ -15,7 +15,8 @@ import { Alert } from '@/components/ui-elements/alert';
 import { Button } from '@/components/ui-elements/button';
 import { Select } from '@/components/FormElements/select';
 import DatePickerTwo from '@/components/FormElements/DatePicker/DatePickerTwo';
-import { extractErrorMessage } from '@/utils/error-handler';
+import { extractErrorMessage, isServerDownError } from '@/utils/error-handler';
+import { useSession } from '@/context/SessionContext';
 
 /**
  * Componente de tarjeta estadística para mostrar métricas resumidas.
@@ -81,6 +82,9 @@ export default function Historial() {
   });
   const [filterDay, setFilterDay] = useState('Todos los días');
 
+  // Hook de sesión para manejo de errores globales
+  const { showServerDown } = useSession();
+
   /**
    * Dispara una alerta visual en la interfaz.
    */
@@ -142,7 +146,11 @@ export default function Historial() {
       const normalizedHistory = normalizeHistoryData(rawHistory);
       setHistory(normalizedHistory);
     } catch (error) {
-      triggerAlert('error', 'Error al cargar datos', extractErrorMessage(error));
+      if (isServerDownError(error)) {
+        showServerDown(extractErrorMessage(error));
+      } else {
+        triggerAlert('error', 'Error al cargar datos', extractErrorMessage(error));
+      }
     } finally {
       setLoading(false);
     }
@@ -199,7 +207,11 @@ export default function Historial() {
       const normalizedHistory = normalizeHistoryData(rawHistory);
       setHistory(normalizedHistory);
     } catch (error) {
-      triggerAlert('error', 'Error al cargar historial', extractErrorMessage(error));
+      if (isServerDownError(error)) {
+        showServerDown(extractErrorMessage(error));
+      } else {
+        triggerAlert('error', 'Error al cargar historial', extractErrorMessage(error));
+      }
     }
   };
 
@@ -280,11 +292,15 @@ export default function Historial() {
       setSessionDetail(sessionDetail as SessionDetail);
       setShowModal(true);
     } catch (error) {
-      triggerAlert(
-        'error',
-        'Error al cargar detalles',
-        'No se pudieron cargar los detalles de la sesión. Intenta nuevamente.'
-      );
+      if (isServerDownError(error)) {
+        showServerDown(extractErrorMessage(error));
+      } else {
+        triggerAlert(
+          'error',
+          'Error al cargar detalles',
+          'No se pudieron cargar los detalles de la sesión. Intenta nuevamente.'
+        );
+      }
     }
   };
 
@@ -315,11 +331,15 @@ export default function Historial() {
         `La asistencia de "${attendanceToDelete.name}" del ${attendanceToDelete.date} se eliminó correctamente.`
       );
     } catch (error) {
-      triggerAlert(
-        'error',
-        'Error al eliminar',
-        extractErrorMessage(error)
-      );
+      if (isServerDownError(error)) {
+        showServerDown(extractErrorMessage(error));
+      } else {
+        triggerAlert(
+          'error',
+          'Error al eliminar',
+          extractErrorMessage(error)
+        );
+      }
     } finally {
       setAttendanceToDelete(null);
     }

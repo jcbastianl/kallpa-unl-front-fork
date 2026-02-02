@@ -18,8 +18,9 @@ import ErrorMessage from '@/components/FormElements/errormessage';
 import { Button } from '@/components/ui-elements/button';
 import { Select } from '@/components/FormElements/select';
 import InputGroup from '@/components/FormElements/InputGroup';
+import { extractErrorMessage, isServerDownError } from '@/utils/error-handler';
+import { useSession } from '@/context/SessionContext';
 import { parseDate } from '@/lib/utils';
-import { extractErrorMessage } from '@/utils/error-handler';
 
 // Días de la semana disponibles para programación
 const DAYS_OF_WEEK = [
@@ -52,6 +53,7 @@ function Loading() {
  */
 export default function Programar() {
   const router = useRouter();
+  const { showServerDown } = useSession();
   
   // Estado de carga y guardado
   const [loading, setLoading] = useState(true);
@@ -153,7 +155,11 @@ export default function Programar() {
 
       setSchedules(normalizedSchedules);
     } catch (error) {
-      triggerAlert('error', 'Error al cargar horarios', extractErrorMessage(error));
+      if (isServerDownError(error)) {
+        showServerDown(extractErrorMessage(error));
+      } else {
+        triggerAlert('error', 'Error al cargar horarios', extractErrorMessage(error));
+      }
     } finally {
       setLoading(false);
     }
@@ -233,50 +239,7 @@ export default function Programar() {
     e.preventDefault();
     setErrors({});
     setSaving(true);
-
-    const newErrors: Record<string, string> = {};
-
-    // Validaciones de campos requeridos
-    if (!formData.name.trim()) {
-      newErrors.name = 'El nombre de la sesión es obligatorio';
-    } else if (formData.name.trim().length < 3) {
-      newErrors.name = 'El nombre debe tener al menos 3 caracteres';
-    }
-
-    if (!formData.program) {
-      newErrors.program = 'Debes seleccionar un programa';
-    }
-
-    if (sessionType === 'recurring' && !formData.day_of_week) {
-      newErrors.day_of_week = 'Debes seleccionar un día de la semana';
-    }
-
-    if (sessionType === 'specific' && !formData.specific_date) {
-      newErrors.specific_date = 'Debes seleccionar una fecha';
-    }
-
-    if (!formData.start_time) {
-      newErrors.start_time = 'La hora de inicio es obligatoria';
-    }
-
-    if (!formData.end_time) {
-      newErrors.end_time = 'La hora de fin es obligatoria';
-    }
-
-    if (formData.start_time && formData.end_time && formData.start_time >= formData.end_time) {
-      newErrors.end_time = 'La hora de fin debe ser posterior a la hora de inicio';
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      setSaving(false);
-      triggerAlert(
-        'warning',
-        'Campos incompletos',
-        'Por favor completa todos los campos requeridos marcados con *.'
-      );
-      return;
-    }
+    setErrors({}); // Limpiar errores previos
 
     try {
       // Construir payload para el backend (camelCase)
@@ -328,23 +291,17 @@ export default function Programar() {
       setErrors({});
       loadData();
     } catch (error: any) {
-      // Extraer y mostrar errores del backend
-      const errorMessage = extractErrorMessage(error);
-      
-      // Si hay errores de validación específicos por campo
-      if (error?.response?.data?.data && typeof error.response.data.data === 'object') {
+      // Verificar si es error de servidor caído
+      if (isServerDownError(error)) {
+        showServerDown(extractErrorMessage(error));
+      } else if (error?.response?.data?.data && typeof error.response.data.data === 'object') {
+        // Si hay errores de validación específicos por campo
         const fieldErrors: Record<string, string> = {};
         Object.entries(error.response.data.data).forEach(([key, value]) => {
           fieldErrors[key] = String(value);
         });
         setErrors(fieldErrors);
       }
-      
-      triggerAlert(
-        'error',
-        'Error al crear sesión',
-        errorMessage
-      );
     } finally {
       setSaving(false);
     }

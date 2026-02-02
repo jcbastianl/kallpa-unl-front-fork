@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { attendanceService } from '@/services/attendance.services';
 import type { Program, Participant } from '@/types/attendance';
 import { Alert } from '@/components/ui-elements/alert';
-import { extractErrorMessage } from '@/utils/error-handler';
+import { extractErrorMessage, isServerDownError } from '@/utils/error-handler';
+import { useSession } from '@/context/SessionContext';
 
 const COLORS = [
   { value: '#3B82F6' },
@@ -26,6 +27,8 @@ function Loading() {
 }
 
 export default function ProgramasPage() {
+  const { showServerDown } = useSession();
+  
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -125,11 +128,15 @@ export default function ProgramasPage() {
       handleCloseModal();
       loadPrograms();
     } catch (error: any) {
-      triggerAlert(
-        'error',
-        'Error al guardar',
-        extractErrorMessage(error)
-      );
+      if (isServerDownError(error)) {
+        showServerDown(extractErrorMessage(error));
+      } else {
+        triggerAlert(
+          'error',
+          'Error al guardar',
+          extractErrorMessage(error)
+        );
+      }
     } finally {
       setSaving(false);
     }
@@ -154,11 +161,15 @@ export default function ProgramasPage() {
       );
       loadPrograms();
     } catch (error) {
-      triggerAlert(
-        'error',
-        'Error al eliminar',
-        extractErrorMessage(error)
-      );
+      if (isServerDownError(error)) {
+        showServerDown(extractErrorMessage(error));
+      } else {
+        triggerAlert(
+          'error',
+          'Error al eliminar',
+          extractErrorMessage(error)
+        );
+      }
     } finally {
       setDeleting(null);
       setProgramToDelete(null);
@@ -179,7 +190,11 @@ export default function ProgramasPage() {
       }));
       setProgramParticipants(normalized);
     } catch (error) {
-      triggerAlert('error', 'Error al cargar participantes', extractErrorMessage(error));
+      if (isServerDownError(error)) {
+        showServerDown(extractErrorMessage(error));
+      } else {
+        triggerAlert('error', 'Error al cargar participantes', extractErrorMessage(error));
+      }
       setProgramParticipants([]);
     } finally {
       setLoadingParticipants(false);

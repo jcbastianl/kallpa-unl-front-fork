@@ -18,9 +18,10 @@ import ErrorMessage from '@/components/FormElements/errormessage';
 import { Button } from '@/components/ui-elements/button';
 import { Select } from '@/components/FormElements/select';
 import InputGroup from '@/components/FormElements/InputGroup';
+import { extractErrorMessage, isServerDownError } from '@/utils/error-handler';
+import { useSession } from '@/context/SessionContext';
 import { parseDate } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import { extractErrorMessage } from '@/utils/error-handler';
 
 /**
  * Componente de tarjeta de estadísticas
@@ -57,6 +58,8 @@ function Loading() {
  * Gestiona la visualización de sesiones del día y próximas
  */
 export default function DashboardAsistencia() {
+  const { showServerDown } = useSession();
+  
   // Estados para datos
   const [sessions, setSessions] = useState<Session[]>([]);
   const [todaySchedules, setTodaySchedules] = useState<Schedule[]>([]);
@@ -399,11 +402,15 @@ export default function DashboardAsistencia() {
       );
       loadData();
     } catch (error) {
-      triggerAlert(
-        'error',
-        'Error al eliminar',
-        extractErrorMessage(error)
-      );
+      if (isServerDownError(error)) {
+        showServerDown(extractErrorMessage(error));
+      } else {
+        triggerAlert(
+          'error',
+          'Error al eliminar',
+          extractErrorMessage(error)
+        );
+      }
     } finally {
       setDeleting(null);
       setSessionToDelete(null);
@@ -480,11 +487,15 @@ export default function DashboardAsistencia() {
         'Los cambios se han guardado correctamente.'
       );
     } catch (error) {
-      triggerAlert(
-        'error',
-        'Error al actualizar',
-        extractErrorMessage(error)
-      );
+      if (isServerDownError(error)) {
+        showServerDown(extractErrorMessage(error));
+      } else {
+        triggerAlert(
+          'error',
+          'Error al actualizar',
+          extractErrorMessage(error)
+        );
+      }
     }
   };
 

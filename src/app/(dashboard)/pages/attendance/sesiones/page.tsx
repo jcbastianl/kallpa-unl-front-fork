@@ -13,7 +13,8 @@ import type { Schedule } from '@/types/attendance';
 import { Alert } from '@/components/ui-elements/alert';
 import { Button } from '@/components/ui-elements/button';
 import InputGroup from '@/components/FormElements/InputGroup';
-import { extractErrorMessage } from '@/utils/error-handler';
+import { extractErrorMessage, isServerDownError } from '@/utils/error-handler';
+import { useSession } from '@/context/SessionContext';
 
 /**
  * Componente de carga con spinner animado.
@@ -31,6 +32,8 @@ function Loading() {
  * Lista todas las sesiones programadas con opciones de edición y eliminación.
  */
 export default function Sesiones() {
+  const { showServerDown } = useSession();
+  
   // Estado de datos
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,7 +114,11 @@ export default function Sesiones() {
       });
       setSchedules(normalized);
     } catch (error) {
-      triggerAlert('error', 'Error al cargar sesiones', extractErrorMessage(error));
+      if (isServerDownError(error)) {
+        showServerDown(extractErrorMessage(error));
+      } else {
+        triggerAlert('error', 'Error al cargar sesiones', extractErrorMessage(error));
+      }
     } finally {
       setLoading(false);
     }
@@ -161,11 +168,15 @@ export default function Sesiones() {
         `La sesión "${sessionToDelete.name}" se ha eliminado correctamente.`
       );
     } catch (error) {
-      triggerAlert(
-        'error',
-        'Error al eliminar',
-        extractErrorMessage(error)
-      );
+      if (isServerDownError(error)) {
+        showServerDown(extractErrorMessage(error));
+      } else {
+        triggerAlert(
+          'error',
+          'Error al eliminar',
+          extractErrorMessage(error)
+        );
+      }
     } finally {
       setDeleting(null);
       setSessionToDelete(null);
@@ -210,11 +221,15 @@ export default function Sesiones() {
         'Los cambios se han guardado correctamente.'
       );
     } catch (error) {
-      triggerAlert(
-        'error',
-        'Error al actualizar',
-        extractErrorMessage(error)
-      );
+      if (isServerDownError(error)) {
+        showServerDown(extractErrorMessage(error));
+      } else {
+        triggerAlert(
+          'error',
+          'Error al actualizar',
+          extractErrorMessage(error)
+        );
+      }
     }
   };
 

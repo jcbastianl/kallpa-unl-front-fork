@@ -18,8 +18,14 @@
  * @returns Mensaje de error formateado para mostrar al usuario
  */
 export function extractErrorMessage(error: any): string {
-  // Si no hay error response, error genérico
-  if (!error?.response?.data) {
+  // Si no hay error response (servidor apagado o sin conexión)
+  if (!error?.response) {
+    if (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network Error')) {
+      return 'No se puede conectar con el servidor. Por favor intenta nuevamente más tarde.';
+    }
+    if (error?.message?.includes('timeout')) {
+      return 'El servidor tardó demasiado en responder. Intenta nuevamente.';
+    }
     if (error?.message) {
       return error.message;
     }
@@ -44,6 +50,18 @@ export function extractErrorMessage(error: any): string {
   }
 
   return errorMessage;
+}
+
+/**
+ * Verifica si el error es por servidor caído o sin conexión.
+ * @param error - Error de axios
+ * @returns true si el servidor está apagado
+ */
+export function isServerDownError(error: any): boolean {
+  return !error?.response || 
+         error?.code === 'ERR_NETWORK' || 
+         error?.message?.includes('Network Error') ||
+         error?.message?.includes('ECONNREFUSED');
 }
 
 /**

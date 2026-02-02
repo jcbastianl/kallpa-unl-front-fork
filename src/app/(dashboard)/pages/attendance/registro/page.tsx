@@ -14,7 +14,8 @@ import { attendanceService } from '@/services/attendance.services';
 import type { Schedule, Participant, Program } from '@/types/attendance';
 import { Alert } from '@/components/ui-elements/alert';
 import { Button } from '@/components/ui-elements/button';
-import { extractErrorMessage } from '@/utils/error-handler';
+import { extractErrorMessage, isServerDownError } from '@/utils/error-handler';
+import { useSession } from '@/context/SessionContext';
 
 /**
  * Componente de carga con spinner animado.
@@ -33,6 +34,7 @@ function Loading() {
  */
 export default function Registro() {
   const searchParams = useSearchParams();
+  const { showServerDown } = useSession();
   
   // Estado de datos
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -278,7 +280,11 @@ export default function Registro() {
       setParticipants(normalizedParticipants);
       setAttendance(newAttendance);
     } catch (error) {
-      triggerAlert('error', 'Error al actualizar participantes', extractErrorMessage(error));
+      if (isServerDownError(error)) {
+        showServerDown(extractErrorMessage(error));
+      } else {
+        triggerAlert('error', 'Error al actualizar participantes', extractErrorMessage(error));
+      }
     } finally {
       setRefreshing(false);
     }
@@ -347,11 +353,15 @@ export default function Registro() {
       );
       setTimeout(() => setSuccess(false), 3000);
     } catch (error: any) {
-      triggerAlert(
-        'error',
-        'Error al guardar',
-        extractErrorMessage(error)
-      );
+      if (isServerDownError(error)) {
+        showServerDown(extractErrorMessage(error));
+      } else {
+        triggerAlert(
+          'error',
+          'Error al guardar',
+          extractErrorMessage(error)
+        );
+      }
     } finally {
       setSaving(false);
     }
@@ -385,14 +395,16 @@ export default function Registro() {
         </p>
       </div>
 
-      {/* Alert */}
+      {/* Alert flotante centrada con animación */}
       {showAlert && (
-        <div className="mb-6">
-          <Alert
-            variant={alertVariant}
-            title={alertTitle}
-            description={alertDescription}
-          />
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="backdrop-blur-sm bg-white/95 dark:bg-gray-dark/95 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <Alert
+              variant={alertVariant}
+              title={alertTitle}
+              description={alertDescription}
+            />
+          </div>
         </div>
       )}
 

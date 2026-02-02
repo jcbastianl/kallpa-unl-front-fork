@@ -12,7 +12,8 @@ import Link from 'next/link';
 import { attendanceService } from '@/services/attendance.services';
 import { participantService } from '@/services/participant.service';
 import type { Participant } from '@/types/attendance';
-import { extractErrorMessage } from '@/utils/error-handler';
+import { extractErrorMessage, isServerDownError } from '@/utils/error-handler';
+import { useSession } from '@/context/SessionContext';
 
 /**
  * Componente de tarjeta estadística para mostrar métricas resumidas.
@@ -49,6 +50,8 @@ function Loading() {
  * Lista todos los usuarios con filtros por tipo y búsqueda.
  */
 export default function Participantes() {
+  const { showServerDown } = useSession();
+  
   // Estado de datos
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [filteredParticipants, setFilteredParticipants] = useState<Participant[]>([]);
