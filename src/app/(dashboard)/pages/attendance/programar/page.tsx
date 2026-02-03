@@ -7,20 +7,19 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DatePickerTwo from '@/components/FormElements/DatePicker/DatePickerTwo';
 import { attendanceService } from '@/services/attendance.services';
-import type { Schedule, Program } from '@/types/attendance';
+import type { Schedule } from '@/types/attendance';
 import { Alert } from '@/components/ui-elements/alert';
 import ErrorMessage from '@/components/FormElements/errormessage';
 import { Button } from '@/components/ui-elements/button';
 import { Select } from '@/components/FormElements/select';
 import InputGroup from '@/components/FormElements/InputGroup';
-import { extractErrorMessage, isServerDownError } from '@/utils/error-handler';
-import { useSession } from '@/context/SessionContext';
+import { extractErrorMessage } from '@/utils/error-handler';
 import { parseDate } from '@/lib/utils';
+import { Calendar, CirclePlus } from 'lucide-react';
 
 // Días de la semana disponibles para programación
 const DAYS_OF_WEEK = [
@@ -53,20 +52,18 @@ function Loading() {
  */
 export default function Programar() {
   const router = useRouter();
-  const { showServerDown } = useSession();
-  
+
   // Estado de carga y guardado
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+
   // Datos principales
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
-  
+
   // Estado del formulario
   const [sessionType, setSessionType] = useState<SessionType>('recurring');
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
+
   // Estado de alertas
   const [showAlert, setShowAlert] = useState(false);
   const [alertVariant, setAlertVariant] = useState<'success' | 'error' | 'warning'>('success');
@@ -127,7 +124,7 @@ export default function Programar() {
   const loadData = async () => {
     try {
       const res = await attendanceService.getSchedules();
-      const rawSchedules = res.data.data || [];
+      const rawSchedules = res.data || [];
 
       const normalizedSchedules = rawSchedules.map((s: any) => {
         const dayFromBackend = s.dayOfWeek || s.day_of_week;
@@ -154,12 +151,9 @@ export default function Programar() {
       });
 
       setSchedules(normalizedSchedules);
-    } catch (error) {
-      if (isServerDownError(error)) {
-        showServerDown(extractErrorMessage(error));
-      } else {
-        triggerAlert('error', 'Error al cargar horarios', extractErrorMessage(error));
-      }
+    } catch (err: any) {
+      if (err?.message === "SERVER_DOWN" || err?.message === "SESSION_EXPIRED") return;
+      triggerAlert('error', 'Error al cargar horarios', extractErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -290,18 +284,19 @@ export default function Programar() {
       });
       setErrors({});
       loadData();
-    } catch (error: any) {
-      // Verificar si es error de servidor caído
-      if (isServerDownError(error)) {
-        showServerDown(extractErrorMessage(error));
-      } else if (error?.response?.data?.data && typeof error.response.data.data === 'object') {
-        // Si hay errores de validación específicos por campo
-        const fieldErrors: Record<string, string> = {};
-        Object.entries(error.response.data.data).forEach(([key, value]) => {
-          fieldErrors[key] = String(value);
-        });
-        setErrors(fieldErrors);
+    } catch (err: any) {
+      if (err?.message === "SERVER_DOWN" || err?.message === "SESSION_EXPIRED") return;
+      if (err?.status === 'error' && err?.data) {
+        setErrors(err.data);
+        return;
       }
+
+      triggerAlert(
+        'error',
+        'Error al crear la sesión',
+        err?.message || 'Ocurrió un error inesperado'
+      );
+
     } finally {
       setSaving(false);
     }
@@ -339,7 +334,7 @@ export default function Programar() {
     });
 
     const byDay: Record<string, Schedule[]> = {};
-    
+
     // Inicializar todos los días
     DAYS_OF_WEEK.forEach(d => {
       byDay[d.value] = [];
@@ -347,13 +342,13 @@ export default function Programar() {
 
     activeSchedules.forEach(s => {
       const specificDate = (s as any).specific_date || (s as any).specificDate;
-      
+
       if (specificDate) {
         // Para sesiones con fecha específica, determinar el día de la semana
         const sessionDate = parseDate(specificDate);
         const dayOfWeek = sessionDate.getDay(); // 0=domingo, 1=lunes, etc.
         const dayValue = dayNumberToValue[dayOfWeek];
-        
+
         // Solo incluir si es de esta semana (próximos 7 días)
         const daysDiff = Math.ceil((sessionDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         if (daysDiff >= 0 && daysDiff <= 6) {
@@ -379,8 +374,7 @@ export default function Programar() {
     <div>
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">Programar Sesión</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">Crea una nueva sesión de entrenamiento para el programa.</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">Programar Sesión</h1>
       </div>
 
       {/* Alert */}
@@ -398,7 +392,7 @@ export default function Programar() {
         {/* Form Section */}
         <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-            <span className="material-symbols-outlined text-blue-800" translate="no">add_circle</span>
+            <CirclePlus className="w-5 h-5 text-blue-800" />
             Nueva Sesión
           </h2>
 
@@ -578,7 +572,7 @@ export default function Programar() {
         {/* Existing Schedules */}
         <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-            <span className="material-symbols-outlined text-blue-800" translate="no">calendar_month</span>
+            <Calendar className="w-5 h-5 text-blue-800" />
             Horario Semanal Actual
           </h2>
 

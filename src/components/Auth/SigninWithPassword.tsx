@@ -39,7 +39,7 @@ export default function SigninWithPassword() {
       });
       
       setTimeout(() => {
-        router.push("/dashboard");
+        router.push("/pages/participant");
       }, 100);
     } catch (err: any) {
       setError(err.message || "Credenciales inválidas. Intente nuevamente.");

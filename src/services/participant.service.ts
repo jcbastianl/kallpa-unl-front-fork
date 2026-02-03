@@ -1,4 +1,5 @@
 import { Participant, UpdateParticipantData } from "@/types/participant";
+import { fetchWithSession } from "./fetchWithSession";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -11,73 +12,39 @@ export const participantService = {
     };
   },
 
-  async create(data: any) {
-    const payload = {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      dni: data.dni,
-      email: data.email || `${data.dni}@participante.local`,
-      phone: data.phone || "",
-      address: data.address || "",
-      age: data.age || 0,
-      type: data.type,
-      password: data.password || undefined,
-    };
-
-    const response = await fetch(`${API_URL}/users`, {
-      method: "POST",
+  async getAll(): Promise<Participant[]> {
+    const response = await fetchWithSession(`${API_URL}/users`, {
+      method: "GET",
       headers: this.getHeaders(),
-      body: JSON.stringify(payload),
     });
 
-    const result = await response.json();
-
     if (!response.ok) {
-      throw new Error(
-        result.msg || result.message || "Error al registrar participante",
+      throw new Error("Error al obtener participantes");
+    }
+
+    const result = await response.json();
+    const list = Array.isArray(result) ? result : result.data || [];
+
+    return list
+      .map((p: any) => ({
+        id: p.external_id || p.java_external || p.id?.toString() || p.dni,
+        firstName: p.firstName || p.first_name || "",
+        lastName: p.lastName || p.last_name || "",
+        dni: p.dni || p.identification || "",
+        email: p.email || "",
+        phone: p.phone || p.phono || "",
+        address: p.address || p.direction || "",
+        age: p.age || 0,
+        type: p.type || p.type_stament || "PARTICIPANTE",
+        role: p.role || "USER",
+        status: p.status || "ACTIVO",
+      }))
+      .filter(
+        (p: any) =>
+          p.type !== "ADMINISTRATIVO" &&
+          p.type !== "DOCENTEADMIN" &&
+          p.type !== "PASANTE"
       );
-    }
-
-    return result;
-  },
-
-  async getAll(): Promise<Participant[] | undefined> {
-    try {
-      const response = await fetch(`${API_URL}/users`, {
-        method: "GET",
-        headers: this.getHeaders(),
-      });
-
-      if (!response.ok) {
-        return undefined;
-      }
-
-      const result = await response.json();
-      const list = Array.isArray(result) ? result : result.data || [];
-
-      return list
-        .map((p: any) => ({
-          id: p.external_id || p.java_external || p.id?.toString() || p.dni,
-          firstName: p.firstName || p.first_name || "",
-          lastName: p.lastName || p.last_name || "",
-          dni: p.dni || p.identification || "",
-          email: p.email || "",
-          phone: p.phone || p.phono || "",
-          address: p.address || p.direction || "",
-          age: p.age || 0,
-          type: p.type || p.type_stament || "PARTICIPANTE",
-          role: p.role || "USER",
-          status: p.status || "ACTIVO",
-        }))
-        .filter(
-          (p: any) =>
-            p.type !== "ADMINISTRATIVO" &&
-            p.type !== "DOCENTEADMIN" &&
-            p.type !== "PASANTE"
-        );
-    } catch (error) {
-      return undefined;
-    }
   },
 
   /**
@@ -173,7 +140,7 @@ export const participantService = {
   },
 
   async changeStatus(externalId: string, newStatus: string) {
-    const response = await fetch(`${API_URL}/users/${externalId}/status`, {
+    const response = await fetchWithSession(`${API_URL}/users/${externalId}/status`, {
       method: "PUT",
       headers: this.getHeaders(),
       body: JSON.stringify({ status: newStatus }),
@@ -182,43 +149,11 @@ export const participantService = {
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(result.msg || "Error al cambiar estado");
+      throw new Error("Error al cambiar estado");
     }
 
     return result;
   },
-
-  async createInitiation(data: any) {
-    const payload = {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      age: data.age,
-      dni: data.dni,
-      address: data.address || "",
-      type: "INICIACION",
-      responsible: {
-        name: data.responsibleName,
-        dni: data.responsibleDni,
-        phone: data.responsiblePhone,
-        relationship: data.relationship,
-      },
-    };
-
-    const response = await fetch(`${API_URL}/users/initiation`, {
-      method: "POST",
-      headers: this.getHeaders(),
-      body: JSON.stringify(payload),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.msg || "Error al registrar iniciación");
-    }
-
-    return result;
-  },
-
 
   async getPasantes(): Promise<Participant[]> {
     const response = await fetch(`${API_URL}/users`, {
@@ -252,59 +187,52 @@ export const participantService = {
 
   // Método para crear participante y manejar errores del backend
   async createParticipant(data: any) {
-    try {
-      const age = Number(data.age);
-      const isMinor = age > 0 && age < 18;
+    const age = Number(data.age);
+    const isMinor = age > 0 && age < 18;
 
-      const payload = isMinor
-        ? {
-          participant: {
-            firstName: data.firstName,
-            lastName: data.lastName,
-            age: data.age,
-            dni: data.dni,
-            phone: data.phone || "",
-            email: data.email || "",
-            address: data.address || "",
-            type: data.type,
-            program: data.program,
-          },
-          responsible: {
-            name: data.responsibleName,
-            dni: data.responsibleDni,
-            phone: data.responsiblePhone,
-          },
-        }
-        : {
+    const payload = isMinor
+      ? {
+        participant: {
           firstName: data.firstName,
           lastName: data.lastName,
           age: data.age,
           dni: data.dni,
           phone: data.phone || "",
-          email: data.email || `${data.dni}@participante.local`,
+          email: data.email || "",
           address: data.address || "",
           type: data.type,
           program: data.program,
-        };
-
-      const response = await fetch(`${API_URL}/save-participants`, {
-        method: "POST",
-        headers: this.getHeaders(),
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw result; // el backend manda { data, msg, etc }
+        },
+        responsible: {
+          name: data.responsibleName,
+          dni: data.responsibleDni,
+          phone: data.responsiblePhone,
+        },
       }
-      return result;
-    } catch (error: any) {
-      if (error instanceof TypeError && error.message.includes("Failed to fetch")) {
-        throw { type: "SERVER_DOWN" };
-      }
-      throw error;
+      : {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        age: data.age,
+        dni: data.dni,
+        phone: data.phone || "",
+        email: data.email || `${data.dni}@participante.local`,
+        address: data.address || "",
+        type: data.type,
+        program: data.program,
+      };
+
+    const response = await fetchWithSession(`${API_URL}/save-participants`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw result;
     }
+    return result;
   },
 
   async getActiveParticipantsCounts(): Promise<{ adult: number; minor: number }> {
@@ -328,23 +256,16 @@ export const participantService = {
    * envía estructura anidada {participant: {...}, responsible: {...}}.
    */
   async updateParticipant(externalId: string, data: UpdateParticipantData) {
-    try {
-      const response = await fetch(`${API_URL}/participants/${externalId}`, {
-        method: "PUT",
-        headers: this.getHeaders(),
-        body: JSON.stringify(data),
-      });
+    const response = await fetchWithSession(`${API_URL}/participants/${externalId}`, {
+      method: "PUT",
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
 
-      const result = await response.json();
-      if (!response.ok) {
-        throw result;
-      }
-      return result;
-    } catch (error: any) {
-      if (error instanceof TypeError && error.message.includes("Failed to fetch")) {
-        throw { type: "SERVER_DOWN" };
-      }
-      throw error;
+    const result = await response.json();
+    if (!response.ok) {
+      throw result;
     }
+    return result;
   }
 };

@@ -22,16 +22,23 @@ import { extractErrorMessage, isServerDownError } from '@/utils/error-handler';
 import { useSession } from '@/context/SessionContext';
 import { parseDate } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { Calendar, Users, Activity, Plus, Check, MapPin, Clock, CalendarDays, Edit3, Trash2, Timer } from 'lucide-react';
 
 /**
  * Componente de tarjeta de estadísticas
  */
-function StatCard({ icon, iconBg, label, value }: { icon: string; iconBg: string; label: string; value: string | number }) {
+function StatCard({ icon: Icon, iconBg, label, value }: {
+  icon: React.ElementType; // Cambiado de string a ElementType
+  iconBg: string;
+  label: string;
+  value: string | number
+}) {
   return (
     <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-3">
         <div className={`${iconBg} p-2 rounded-lg`}>
-          <span className="material-symbols-outlined" translate="no">{icon}</span>
+          {/* 2. Renderizamos el icono como componente con tamaño fijo */}
+          <Icon size={24} strokeWidth={2} />
         </div>
         <div>
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">{label}</p>
@@ -59,7 +66,7 @@ function Loading() {
  */
 export default function DashboardAsistencia() {
   const { showServerDown } = useSession();
-  
+
   // Estados para datos
   const [sessions, setSessions] = useState<Session[]>([]);
   const [todaySchedules, setTodaySchedules] = useState<Schedule[]>([]);
@@ -68,11 +75,11 @@ export default function DashboardAsistencia() {
   const [todayHistory, setTodayHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate] = useState(new Date());
-  
+
   // Estados para edición de sesiones
   const [editingSession, setEditingSession] = useState<Schedule | null>(null);
   const [programs, setPrograms] = useState<Program[]>([]);
-  
+
   // Estados para alertas y confirmaciones
   const [showAlert, setShowAlert] = useState(false);
   const [alertVariant, setAlertVariant] = useState<'success' | 'error' | 'warning'>('success');
@@ -81,19 +88,9 @@ export default function DashboardAsistencia() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<{ id: string | number, name: string } | null>(null);
   const [editEndDateError, setEditEndDateError] = useState<string>('');
-  
+
   // Opciones de colores para programas
   const router = useRouter();
-  const PROGRAM_COLORS = [
-    { value: '#3B82F6', label: 'Azul' },
-    { value: '#10B981', label: 'Verde' },
-    { value: '#F59E0B', label: 'Amarillo' },
-    { value: '#EF4444', label: 'Rojo' },
-    { value: '#8B5CF6', label: 'Morado' },
-    { value: '#EC4899', label: 'Rosa' },
-    { value: '#06B6D4', label: 'Cyan' },
-    { value: '#F97316', label: 'Naranja' },
-  ];
   const [deleting, setDeleting] = useState<string | number | null>(null);
 
   /**
@@ -131,23 +128,6 @@ export default function DashboardAsistencia() {
    */
   useEffect(() => {
     loadData();
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        loadData();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    const interval = setInterval(() => {
-      loadData();
-    }, 30000);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      clearInterval(interval);
-    };
   }, []);
 
   /**
@@ -162,7 +142,7 @@ export default function DashboardAsistencia() {
       let historyData: any[] = [];
       try {
         const historyRes = await attendanceService.getHistory(todayStr, todayStr);
-        historyData = historyRes.data.data || [];
+        historyData = historyRes.data || [];
       } catch (error) {
         // Error manejado silenciosamente - historial puede estar vacío
       }
@@ -174,10 +154,10 @@ export default function DashboardAsistencia() {
 
       const sessionsFromBackend: Session[] = [];
       setSessions(sessionsFromBackend);
-      setParticipants(participantsRes.data.data || []);
+      setParticipants(participantsRes.data || []);
       setTodayHistory(historyData);
 
-      const schedules = schedulesRes.data.data || [];
+      const schedules = schedulesRes.data || [];
       const todaySessions = getTodaySessions(schedules);
       setTodaySchedules(todaySessions);
 
@@ -523,10 +503,10 @@ export default function DashboardAsistencia() {
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-8">
+      <div className="mb-2">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               Asistencias
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-1">
@@ -537,7 +517,7 @@ export default function DashboardAsistencia() {
             label="Programar Sesión"
             shape="rounded"
             onClick={() => router.push("/pages/attendance/programar")}
-            icon={<span className="material-symbols-outlined text-sm">add</span>}
+            icon={<Plus size={24} />}
           />
         </div>
       </div>
@@ -554,243 +534,128 @@ export default function DashboardAsistencia() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
         <StatCard
-          icon="calendar_today"
+          icon={Calendar}
           iconBg="bg-blue-500/10 text-blue-500"
           label="SESIONES HOY"
           value={todaySchedules.length}
         />
         <StatCard
-          icon="group"
+          icon={Users}
           iconBg="bg-emerald-500/10 text-emerald-500"
           label="Participantes Activos"
           value={activeParticipants}
         />
 
         <StatCard
-          icon="monitoring"
+          icon={Activity}
           iconBg="bg-purple-500/10 text-purple-500"
           label="Sesiones Semana"
           value={upcomingSessions.length + todaySchedules.length}
         />
       </div>
 
-      {/* Sessions Today */}
-      <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
-        <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <span className="material-symbols-outlined text-blue-800" translate="no">today</span>
+      {/* --- SESIONES DE HOY --- */}
+      <section className="mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+            <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
             Sesiones de Hoy
-            <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
+            <span className="text-xs font-medium text-gray-400 uppercase tracking-tight">
               {formatShortDate(currentDate)}
             </span>
           </h2>
         </div>
-        <div className="p-6">
-          {todaySchedules.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-4">No hay sesiones programadas para hoy</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {todaySchedules.map((schedule) => {
-                const startTime = (schedule as any).start_time || (schedule as any).startTime || '';
-                const endTime = (schedule as any).end_time || (schedule as any).endTime || '';
-                const location = (schedule as any).location || '';
-                const scheduleId = (schedule as any).external_id || schedule.id;
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {todaySchedules.map((schedule) => {
+            const scheduleId = schedule.external_id || schedule.id; //
+            const isCompleted = todayHistory.some(h => (h.schedule?.external_id || h.schedule?.id) === scheduleId);
+            return (
+              <div key={scheduleId} className="bg-white dark:bg-[#111827] rounded-[20px] p-4 border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden">
+                <div className={`absolute left-0 top-0 bottom-0 w-1 ${isCompleted ? 'bg-emerald-500' : 'bg-blue-500'}`} />
 
-                // Buscar TODOS los registros de asistencia para esta sesión
-                const historyRecords = todayHistory.filter((h: any) => {
-                  const hScheduleId = h.schedule?.external_id || h.schedule?.externalId;
-                  return hScheduleId === scheduleId;
-                });
-
-                // Si hay registros, la sesión está completada
-                const isCompleted = historyRecords.length > 0;
-
-                // Contar presentes y total
-                const presentCount = historyRecords.filter((h: any) => h.status === 'present').length;
-                const totalCount = historyRecords.length;
-
-                // Obtener información del programa
-                const prog = programs.find(p => {
-                  const pid = (schedule as any).program_id || (schedule as any).programId || null;
-                  if (!pid) return false;
-                  return p.external_id === String(pid) || p.id === pid || String(p.id) === String(pid) || p.name === (schedule as any).program_name;
-                }) || null;
-
-                const programDisplayName = (schedule as any).program || (schedule as any).program_name || prog?.name || null;
-                const progColor = prog?.color || '#3B82F6';
-
-                return (
-                  <div
-                    key={scheduleId}
-                    className={`relative rounded-lg transition-all duration-300 overflow-hidden ${isCompleted
-                      ? 'bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border border-emerald-300 dark:border-emerald-700'
-                      : 'bg-white dark:bg-gray-dark border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600'
-                      }`}
-                  >
-                    {/* Barra superior de color */}
-                    <div className={`h-1 w-full ${isCompleted ? 'bg-emerald-500' : 'bg-blue-500'
-                      }`}></div>
-
-                    <div className="p-4">
-                      {/* Header con título y badge */}
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h3 className="font-bold text-base text-gray-900 dark:text-white mb-1">{schedule.name}</h3>
-                          {programDisplayName && (
-                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800">
-                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: progColor }}></span>
-                              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{programDisplayName}</span>
-                            </div>
-                          )}
-                        </div>
-                        <span className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${isCompleted
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                          : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                          }`}>
-                          <span className="text-sm">
-                            {isCompleted ? '✓' : '⌛'}
-                          </span>
-                          {isCompleted ? 'Completada' : 'Pendiente'}
-                        </span>
-                      </div>
-
-                      {/* Información de la sesión */}
-                      <div className="space-y-2 mb-3">
-                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                          <span className="text-base">⏰</span>
-                          <span className="font-medium">{startTime} - {endTime}</span>
-                        </div>
-
-                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                          <span className="text-base">📅</span>
-                          <span>{formatShortDate(currentDate)}</span>
-                        </div>
-
-                        {location && (
-                          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                            <span className="text-base">📍</span>
-                            <span>{location}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Botón de acción */}
-                      {scheduleId ? (
-                        <Link
-                          href={`/pages/attendance/registro?session=${scheduleId}&date=${currentDate.toISOString().split('T')[0]}`}
-                          className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-colors ${isCompleted
-                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                            }`}
-                        >
-                          <span className="text-base">{isCompleted ? '✏️' : '✅'}</span>
-                          {isCompleted ? 'Editar Asistencia' : 'Registrar Asistencia'}
-                        </Link>
-                      ) : (
-                        <button disabled className="w-full py-2 rounded-lg text-sm font-medium bg-gray-300 text-gray-500 cursor-not-allowed">
-                          No disponible
-                        </button>
-                      )}
-                    </div>
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="font-bold text-base text-gray-900 dark:text-white leading-tight">{schedule.name}</h3>
+                    <span className="text-[10px] font-bold text-blue-500 uppercase">INICIACIÓN</span>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${isCompleted ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' : 'bg-orange-50 text-orange-500 dark:bg-orange-500/10'
+                    }`}>
+                    {isCompleted ? <Check size={10} /> : <Timer size={10} />}
+                    {isCompleted ? 'Completada' : 'Pendiente'}
+                  </span>
+                </div>
 
-      {/* Upcoming Sessions */}
-      <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
-        <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <span className="material-symbols-outlined text-purple-600" translate="no">upcoming</span>
-            Próximas Sesiones
-          </h2>
-        </div>
-        <div className="p-6">
-          {upcomingSessions.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-4">No hay sesiones programadas próximamente</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {upcomingSessions.map((session, index) => {
-                const sessionId = session.external_id || session.id;
-                const programName = (session as any).program || (session as any).program_name || null;
-                return (
-                  <div
-                    key={`${session.id}-${index}`}
-                    className="relative rounded-lg transition-all duration-300 overflow-hidden bg-white dark:bg-gray-dark border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600"
-                  >
-                    {/* Barra superior de color */}
-                    <div className="h-1 w-full bg-purple-500"></div>
-
-                    <div className="p-4">
-                      {/* Header con título y badge */}
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h3 className="font-bold text-base text-gray-900 dark:text-white mb-1">{session.name}</h3>
-                          {programName && (
-                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800">
-                              <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{programName}</span>
-                            </div>
-                          )}
-                        </div>
-                        <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                          <span className="text-sm">📅</span>
-                          Próxima
-                        </span>
-                      </div>
-
-                      {/* Información de la sesión */}
-                      <div className="space-y-2 mb-3">
-                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                          <span className="text-base">⏰</span>
-                          <span className="font-medium">{session.start_time} - {session.end_time}</span>
-                        </div>
-
-                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                          <span className="text-base">📆</span>
-                          <span>{formatShortDate((session as any).nextDate)}</span>
-                        </div>
-
-                        {session.location && (
-                          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                            <span className="text-base">📍</span>
-                            <span>{session.location}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Botones de acción */}
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEdit(session)}
-                          className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 transition-colors"
-                        >
-                          <span className="text-base">✏️</span>
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleDelete(sessionId, session.name)}
-                          className="p-2 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          title="Eliminar sesión"
-                        >
-                          <span className="text-base">🗑️</span>
-                        </button>
-                      </div>
-                    </div>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                    <Clock size={14} className="text-red-400" />
+                    <span className="text-xs font-medium">{schedule.start_time} - {schedule.end_time}</span>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                    <MapPin size={14} className="text-emerald-400" />
+                    <span className="text-xs font-medium truncate">{schedule.location || 'Coliseo'}</span>
+                  </div>
+                </div>
+
+                <Link href={`/pages/attendance/registro?session=${scheduleId}&date=${currentDate.toISOString().split('T')[0]}`}
+                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all"
+                >
+                  <Check size={14} /> Registrar Asistencia
+                </Link>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      </section>
 
+      {/* --- PRÓXIMAS SESIONES --- */}
+      <section className="mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-1.5 bg-lime-100 dark:bg-lime-500/20 rounded-lg">
+            <CalendarDays className="w-4 h-4 text-lime-600 dark:text-lime-400" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-800 dark:text-white">Próximas Sesiones</h2>
+        </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {upcomingSessions.map((session, index) => {
+            const sessionId = session.external_id || session.id;
+            const sessionDate = (session as any).nextDate;
+            return (
+              <div key={`upcoming-${sessionId}-${index}`} className="bg-white dark:bg-[#111827] rounded-[20px] p-4 border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-lime-500" />
+
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="font-bold text-base text-gray-900 dark:text-white leading-tight">{session.name}</h3>
+                    <span className="text-[10px] font-bold text-lime-600 dark:text-lime-400 uppercase">INICIACIÓN</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-lime-50 dark:bg-lime-500/10 text-lime-600 dark:text-lime-400 flex items-center gap-1">
+                    <Calendar size={10} /> Próxima
+                  </span>
+                </div>
+
+                <div className="space-y-2 mb-4 text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-2 text-xs"><Clock size={14} className="text-red-400" /> {session.start_time} - {session.end_time}</div>
+                  <div className="flex items-center gap-2 text-xs"><Calendar size={14} className="text-blue-400" /> {formatShortDate(sessionDate)}</div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button onClick={() => handleEdit(session)} className="flex-[4] py-2 bg-lime-500 hover:bg-lime-600 text-lime-950 dark:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all">
+                    <Edit3 size={14} /> Editar
+                  </button>
+                  <button onClick={() => handleDelete(session.id, session.name)} className="flex-1 py-2 bg-gray-50 dark:bg-gray-800 text-gray-400 hover:text-red-500 rounded-xl flex items-center justify-center transition-all border border-gray-100 dark:border-gray-700">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       {/* Modal de Edición */}
       {editingSession && (

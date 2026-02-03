@@ -6,18 +6,6 @@ export const NAV_DATA: NavSection[] = [
     label: "MENU PRINCIPAL",
     items: [
       {
-        title: "Dashboard",
-        icon: Icons.HomeIcon,
-        roles: ["PASANTE", "ADMINISTRADOR", "DOCENTE"],
-        url: "/dashboard",
-        items: [
-          // {
-          //   title: "Inicio",
-          //   url: "/dashboard",
-          // },
-        ],
-      },
-      {
         title: "Participantes",
         icon: Icons.User,
         roles: ["PASANTE", "ADMINISTRADOR", "DOCENTE"],

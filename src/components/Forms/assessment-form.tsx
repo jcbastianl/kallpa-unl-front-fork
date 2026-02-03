@@ -10,6 +10,7 @@ import { Select } from "../FormElements/select";
 import { Alert } from "@/components/ui-elements/alert";
 import { useRouter } from "next/navigation";
 import { Button } from "../ui-elements/button";
+import { RefreshCw } from "lucide-react";
 
 interface AssessmentInitialData {
   external_id?: string;
@@ -24,9 +25,7 @@ export function AssessmentForm({ initialData }: { initialData?: AssessmentInitia
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [frequencyMonths, setFrequencyMonths] = useState("");
-  const [exercises, setExercises] = useState<{ name: string; unit: string }[]>([
-    { name: "", unit: "" },
-  ]);
+  const [exercises, setExercises] = useState<{ name: string; unit: string }[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -34,7 +33,7 @@ export function AssessmentForm({ initialData }: { initialData?: AssessmentInitia
       setName(initialData.name);
       setDescription(initialData.description ?? "");
       setFrequencyMonths(initialData.frequency_months?.toString() ?? "");
-    setExercises(initialData.exercises ?? [{ name: "", unit: "" }]);
+      setExercises(initialData.exercises ?? []);
     }
   }, [initialData]);
 
@@ -318,9 +317,10 @@ export function AssessmentForm({ initialData }: { initialData?: AssessmentInitia
               ))}
               <button
                 type="button"
-                onClick={() =>
-                  setExercises([...exercises, { name: "", unit: "" }])
-                }
+                onClick={() => {
+                  setExercises([...exercises, { name: "", unit: "" }]);
+                  clearFieldError("exercises");
+                }}
                 className="mt-4 flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-8 transition-all hover:border-slate-300 hover:bg-slate-100 dark:border-slate-800 dark:hover:border-slate-700 dark:hover:bg-slate-800/30"
               >
                 <div className="rounded-full bg-slate-200 p-2 text-slate-500 dark:bg-slate-800">
@@ -346,11 +346,11 @@ export function AssessmentForm({ initialData }: { initialData?: AssessmentInitia
             </div>
           </div>
           <Button
-            label={loading ? "Procesando..." : isEditing ? "Actualizar Evaluación" : "Guardar Evaluación"}
+            label={loading ? "Guardando..." : isEditing ? "Actualizar Evaluación" : "Guardar Evaluación"}
             type="submit"
             disabled={loading}
             shape="rounded"
-            icon={!loading ? <FiSave size={24} /> : undefined}
+            icon={loading ? <RefreshCw className="animate-spin" size={20} /> : <FiSave size={24} />}
             className="mt-5 w-full"
           />
         </div>

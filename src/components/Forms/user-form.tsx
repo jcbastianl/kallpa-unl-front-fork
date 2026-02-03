@@ -9,6 +9,7 @@ import ErrorMessage from "../FormElements/errormessage";
 import { ShowcaseSection } from "../Layouts/showcase-section";
 import { Alert } from "../ui-elements/alert";
 import { Button } from "../ui-elements/button";
+import { RefreshCw } from "lucide-react";
 
 export const UserForm = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -16,6 +17,7 @@ export const UserForm = () => {
   const [alertType, setAlertType] = useState<"success" | "error" | "warning">("success");
   const [alertTitle, setAlertTitle] = useState("");
   const [alertDescription, setAlertDescription] = useState("");
+  const [saving, setSaving] = useState(false);
   const showTemporaryAlert = (
     type: "success" | "error" | "warning",
     title: string,
@@ -70,6 +72,7 @@ export const UserForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+    setSaving(true);
 
     try {
       const payload: CreateUserRequest = {
@@ -98,17 +101,8 @@ export const UserForm = () => {
         role: "",
       });
     } catch (err: any) {
-      if (err?.type === "SERVER_DOWN") {
-        window.dispatchEvent(
-          new CustomEvent("SERVER_DOWN", {
-            detail: {
-              message:
-                "No se puede conectar con el servidor. Por favor intenta nuevamente más tarde.",
-            },
-          }),
-        );
-        return;
-      }
+      if (err?.message === "SERVER_DOWN" || err?.message === "SESSION_EXPIRED") return;
+
       if (err?.data && typeof err.data === "object") {
         setErrors(err.data);
         return;
@@ -124,6 +118,8 @@ export const UserForm = () => {
       }
 
       showTemporaryAlert("error", "Error", "Error al registrar usuario");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -276,9 +272,11 @@ export const UserForm = () => {
             </ul>
           </div>
 
-          <Button label="Registrar Cuenta"
+          <Button
+            label={saving ? "Registrando..." : "Registrar Cuenta"}
             shape="rounded"
-            icon={<FiSave size={24} />}
+            icon={saving ? <RefreshCw className="animate-spin" size={20} /> : <FiSave size={24} />}
+            disabled={saving}
           />
         </div>
 

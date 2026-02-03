@@ -10,6 +10,7 @@ import { ShowcaseSection } from "../Layouts/showcase-section";
 import { Button } from "@/components/ui-elements/button";
 import { useRouter } from "next/navigation";
 import Loader from "@/components/Loader/loader";
+import { RefreshCw } from "lucide-react";
 
 interface RegisterParticipantFormProps {
   participantId?: string;
@@ -219,17 +220,8 @@ export const RegisterParticipantForm = ({ participantId }: RegisterParticipantFo
         });
       }
     } catch (err: any) {
-      if (err?.type === "SERVER_DOWN") {
-        window.dispatchEvent(
-          new CustomEvent("SERVER_DOWN", {
-            detail: {
-              message:
-                "No se puede conectar con el servidor. Por favor intenta nuevamente más tarde.",
-            },
-          }),
-        );
-        return;
-      }
+      if (err?.message === "SERVER_DOWN" || err?.message === "SESSION_EXPIRED") return;
+
       if (err?.code === 400 && err?.data) {
         setErrors(err.data);
         return;
@@ -437,7 +429,7 @@ export const RegisterParticipantForm = ({ participantId }: RegisterParticipantFo
                 handleChange={handleChange}
                 disabled={isEditMode ? !hasOriginalResponsible : !isMinor}
               />
-              <ErrorMessage message={errors.responsibleName} />
+              {isMinor && <ErrorMessage message={errors.responsibleName} />}
             </div>
 
             <div className="w-full xl:w-1/2">
@@ -450,7 +442,7 @@ export const RegisterParticipantForm = ({ participantId }: RegisterParticipantFo
                 handleChange={handleChange}
                 disabled={isEditMode ? !hasOriginalResponsible : !isMinor}
               />
-              <ErrorMessage message={errors.responsibleDni} />
+              {isMinor && <ErrorMessage message={errors.responsibleDni} />}
             </div>
           </div>
 
@@ -464,7 +456,7 @@ export const RegisterParticipantForm = ({ participantId }: RegisterParticipantFo
               handleChange={handleChange}
               disabled={isEditMode ? !hasOriginalResponsible : !isMinor}
             />
-            <ErrorMessage message={errors.responsiblePhone} />
+            {isMinor && <ErrorMessage message={errors.responsiblePhone} />}
           </div>
         </div>
 
@@ -472,9 +464,10 @@ export const RegisterParticipantForm = ({ participantId }: RegisterParticipantFo
           type="submit"
           disabled={submitting}
           label={submitting ? "Guardando..." : (isEditMode ? "Guardar Cambios" : "Registrar Participante")}
-          icon={!submitting ? <FiSave size={20} /> : undefined}
+          icon={submitting ? <RefreshCw className="animate-spin" size={20} /> : <FiSave size={20} />}
           variant="primary"
           className="mt-6 w-full"
+          shape="rounded"
         />
       </form>
     </ShowcaseSection>

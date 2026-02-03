@@ -17,16 +17,23 @@ import { Select } from '@/components/FormElements/select';
 import DatePickerTwo from '@/components/FormElements/DatePicker/DatePickerTwo';
 import { extractErrorMessage, isServerDownError } from '@/utils/error-handler';
 import { useSession } from '@/context/SessionContext';
+import { CalendarDays, LucideIcon, Percent, Search } from 'lucide-react';
 
 /**
  * Componente de tarjeta estadística para mostrar métricas resumidas.
  */
-function StatCard({ icon, iconBg, label, value }: { icon: string; iconBg: string; label: string; value: string | number }) {
+interface StatCardProps {
+  icon: LucideIcon;
+  iconBg: string;
+  label: string;
+  value: string | number;
+}
+function StatCard({ icon: Icon, iconBg, label, value }: StatCardProps) {
   return (
     <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-3">
-        <div className={`${iconBg} p-2 rounded-lg`}>
-          <span className="material-symbols-outlined" translate="no">{icon}</span>
+        <div className={`${iconBg} p-2 rounded-lg flex items-center justify-center`}>
+          <Icon className="w-5 h-5" />
         </div>
         <div>
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">{label}</p>
@@ -58,7 +65,7 @@ export default function Historial() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [sessionDetail, setSessionDetail] = useState<SessionDetail | null>(null);
-  
+
   // Estado de modales y alertas
   const [showModal, setShowModal] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -74,7 +81,7 @@ export default function Historial() {
     d.setDate(d.getDate() - 7);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
-  
+
   // Estado de filtros - fecha hasta (hoy por defecto)
   const [dateTo, setDateTo] = useState(() => {
     const d = new Date();
@@ -131,8 +138,8 @@ export default function Historial() {
         'monday': 'LUNES', 'tuesday': 'MARTES', 'wednesday': 'MIERCOLES',
         'thursday': 'JUEVES', 'friday': 'VIERNES', 'saturday': 'SABADO', 'sunday': 'DOMINGO'
       };
-      
-      const rawSchedules = schedulesRes.data.data || [];
+
+      const rawSchedules = schedulesRes.data || [];
       const normalizedSchedules = rawSchedules.map((s: any) => ({
         ...s,
         id: s.external_id || s.id,
@@ -142,7 +149,7 @@ export default function Historial() {
       }));
       setSchedules(normalizedSchedules);
 
-      const rawHistory = historyRes.data.data || [];
+      const rawHistory = historyRes.data || [];
       const normalizedHistory = normalizeHistoryData(rawHistory);
       setHistory(normalizedHistory);
     } catch (error) {
@@ -203,15 +210,12 @@ export default function Historial() {
   const loadHistory = async () => {
     try {
       const res = await attendanceService.getHistory(dateFrom, dateTo, undefined, filterDay);
-      const rawHistory = res.data.data || [];
+      const rawHistory = res.data || [];
       const normalizedHistory = normalizeHistoryData(rawHistory);
       setHistory(normalizedHistory);
-    } catch (error) {
-      if (isServerDownError(error)) {
-        showServerDown(extractErrorMessage(error));
-      } else {
-        triggerAlert('error', 'Error al cargar historial', extractErrorMessage(error));
-      }
+    } catch (err: any) {
+      if (err?.message === "SERVER_DOWN" || err?.message === "SESSION_EXPIRED") return;
+      // triggerAlert('error', 'Error al cargar historial', extractErrorMessage(err));
     }
   };
 
@@ -230,7 +234,7 @@ export default function Historial() {
       let scheduleInfo: any = null;
 
       // Detectar si la respuesta es un array plano (lista de asistencias) o un objeto estructurado
-      const responseData = res.data.data;
+      const responseData = res.data;
 
       if (Array.isArray(responseData)) {
         // Es un array plano
@@ -383,8 +387,7 @@ export default function Historial() {
     <div>
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">Historial de Asistencia</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">Consulta los registros de asistencia anteriores.</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">Historial de Asistencia</h1>
       </div>
 
       {/* Alert */}
@@ -399,14 +402,13 @@ export default function Historial() {
       )}
 
       {/* Stats Cards */}
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <StatCard icon="event" iconBg="bg-blue-500/10 text-blue-500" label="Total Sesiones" value={totalSessions} />
-        <StatCard icon="percent" iconBg="bg-emerald-500/10 text-emerald-500" label="Asistencia Promedio" value={`${avgAttendance}%`} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <StatCard icon={CalendarDays} iconBg="bg-blue-500/10 text-blue-500" label="Total Sesiones" value={totalSessions} />
+        <StatCard icon={Percent} iconBg="bg-emerald-500/10 text-emerald-500" label="Asistencia Promedio" value={`${avgAttendance}%`} />
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 mb-6">
+      <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 mb-4">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <div className="min-w-0">
             <DatePickerTwo
@@ -443,11 +445,9 @@ export default function Historial() {
           <div className="min-w-0 flex items-end">
             <Button
               label="Buscar"
-              variant="primary"
               shape="rounded"
-              size="small"
-              className="w-full !bg-blue-800 hover:!bg-blue-900"
-              icon={<span className="material-symbols-outlined text-sm" translate="no">search</span>}
+              className="w-full"
+              icon={<Search size={24} />}
               onClick={loadHistory}
             />
           </div>
@@ -510,23 +510,23 @@ export default function Historial() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <button 
-                          onClick={() => viewDetail(h.schedule_id, h.date)} 
-                          className="text-blue-800 hover:text-blue-900" 
+                        <button
+                          onClick={() => viewDetail(h.schedule_id, h.date)}
+                          className="text-blue-800 hover:text-blue-900"
                           title="Ver detalle"
                         >
                           <span className="material-symbols-outlined text-lg" translate="no">visibility</span>
                         </button>
-                        <Link 
-                          href={`/pages/attendance/registro?session=${h.schedule_id}&date=${h.date}`} 
-                          className="text-gray-600 hover:text-gray-800 dark:text-gray-400" 
+                        <Link
+                          href={`/pages/attendance/registro?session=${h.schedule_id}&date=${h.date}`}
+                          className="text-gray-600 hover:text-gray-800 dark:text-gray-400"
                           title="Editar asistencia"
                         >
                           <span className="material-symbols-outlined text-lg" translate="no">edit</span>
                         </Link>
-                        <button 
-                          onClick={() => handleDelete(h.schedule_id, h.date, h.schedule_name)} 
-                          className="text-red-600 hover:text-red-800" 
+                        <button
+                          onClick={() => handleDelete(h.schedule_id, h.date, h.schedule_name)}
+                          className="text-red-600 hover:text-red-800"
                           title="Eliminar registro"
                         >
                           <span className="material-symbols-outlined text-lg" translate="no">delete</span>

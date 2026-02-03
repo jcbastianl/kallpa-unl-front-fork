@@ -7,14 +7,9 @@
 
 import axios from 'axios';
 import type {
-  Session,
-  Schedule,
-  Participant,
-  AttendanceRecord,
-  AttendanceHistory,
-  SessionDetail,
   CreateScheduleData
 } from '@/types/attendance';
+import { fetchWithSession } from './fetchWithSession';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -36,16 +31,28 @@ const getHeaders = () => {
  * Servicio de asistencia - API v2
  */
 export const attendanceService = {
-  
+
   // ==================== HORARIOS ====================
 
   /**
    * Obtiene todos los horarios/sesiones programadas.
    */
   async getSchedules() {
-    return axios.get(`${API_URL}/attendance/v2/public/schedules`, {
-      headers: getHeaders(),
-    });
+    const res = await fetchWithSession(
+      `${API_URL}/attendance/v2/public/schedules`,
+      {
+        method: 'GET',
+        headers: getHeaders(),
+      }
+    );
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      throw result;
+    }
+
+    return result;
   },
 
   /**
@@ -53,9 +60,23 @@ export const attendanceService = {
    * @param data - Datos del horario a crear
    */
   async createSchedule(data: CreateScheduleData) {
-    return axios.post(`${API_URL}/attendance/v2/public/schedules`, data, {
-      headers: getHeaders(),
-    });
+    const res = await fetchWithSession(
+      `${API_URL}/attendance/v2/public/schedules`,
+      {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+      }
+    );
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      throw result;
+    }
+
+    return result;
+
   },
 
   /**
@@ -64,9 +85,22 @@ export const attendanceService = {
    * @param data - Datos a actualizar
    */
   async updateSchedule(id: string | number, data: Partial<CreateScheduleData>) {
-    return axios.put(`${API_URL}/attendance/v2/public/schedules/${id}`, data, {
-      headers: getHeaders(),
-    });
+    const res = await fetchWithSession(
+      `${API_URL}/attendance/v2/public/schedules/${id}`,
+      {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+      }
+    );
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      throw result;
+    }
+
+    return result;
   },
 
   /**
@@ -74,61 +108,21 @@ export const attendanceService = {
    * @param id - ID del horario a eliminar
    */
   async deleteSchedule(id: string | number) {
-    return axios.delete(`${API_URL}/attendance/v2/public/schedules/${id}`, {
-      headers: getHeaders(),
-    });
-  },
+    const res = await fetchWithSession(
+      `${API_URL}/attendance/v2/public/schedules/${id}`,
+      {
+        method: 'DELETE',
+        headers: getHeaders(),
+      }
+    );
 
-  // ==================== PROGRAMAS ====================
+    const result = await res.json();
 
-  /**
-   * Obtiene todos los programas disponibles.
-   */
-  async getPrograms() {
-    return axios.get(`${API_URL}/attendance/v2/public/programs`, {
-      headers: getHeaders(),
-    });
-  },
+    if (!res.ok) {
+      throw result;
+    }
 
-  /**
-   * Crea un nuevo programa.
-   * @param data - Datos del programa
-   */
-  async createProgram(data: { name: string; description?: string; color?: string }) {
-    return axios.post(`${API_URL}/attendance/v2/public/programs`, data, {
-      headers: getHeaders(),
-    });
-  },
-
-  /**
-   * Actualiza un programa existente.
-   * @param id - ID del programa
-   * @param data - Datos a actualizar
-   */
-  async updateProgram(id: string, data: { name?: string; description?: string; color?: string }) {
-    return axios.put(`${API_URL}/attendance/v2/public/programs/${id}`, data, {
-      headers: getHeaders(),
-    });
-  },
-
-  /**
-   * Elimina un programa.
-   * @param id - ID del programa a eliminar
-   */
-  async deleteProgram(id: string) {
-    return axios.delete(`${API_URL}/attendance/v2/public/programs/${id}`, {
-      headers: getHeaders(),
-    });
-  },
-
-  /**
-   * Obtiene los participantes de un programa específico.
-   * @param programId - ID del programa
-   */
-  async getProgramParticipants(programId: string) {
-    return axios.get(`${API_URL}/attendance/v2/public/programs/${programId}/participants`, {
-      headers: getHeaders(),
-    });
+    return result;
   },
 
   // ==================== PARTICIPANTES ====================
@@ -139,9 +133,21 @@ export const attendanceService = {
    */
   async getParticipantsByProgram(program?: string) {
     const params = program ? `?program=${program}` : '';
-    return axios.get(`${API_URL}/attendance/v2/public/participants${params}`, {
-      headers: getHeaders(),
-    });
+    const res = await fetchWithSession(
+      `${API_URL}/attendance/v2/public/participants${params}`,
+      {
+        method: 'GET',
+        headers: getHeaders(),
+      }
+    );
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      throw result;
+    }
+
+    return result;
   },
 
   /**
@@ -149,31 +155,6 @@ export const attendanceService = {
    */
   async getParticipants() {
     return this.getParticipantsByProgram();
-  },
-
-  /**
-   * Obtiene todos los usuarios del sistema.
-   */
-  async getAllUsers() {
-    return axios.get(`${API_URL}/users`, {
-      headers: getHeaders(),
-    });
-  },
-
-  // ==================== ASISTENCIA ====================
-
-  /**
-   * Registra la asistencia de una sesión.
-   * @param data - Datos de asistencia con lista de participantes y estados
-   */
-  async registerAttendance(data: {
-    schedule_external_id: string;
-    date: string;
-    attendances: { participant_external_id: string; status: string }[];
-  }) {
-    return axios.post(`${API_URL}/attendance/v2/public/register`, data, {
-      headers: getHeaders(),
-    });
   },
 
   /**
@@ -190,9 +171,21 @@ export const attendanceService = {
     if (scheduleId) params.append('schedule_id', scheduleId);
     if (day && day !== 'Todos los días') params.append('day', day);
 
-    return axios.get(`${API_URL}/attendance/v2/public/history?${params.toString()}`, {
-      headers: getHeaders(),
-    });
+    const res = await fetchWithSession(
+      `${API_URL}/attendance/v2/public/history?${params.toString()}`,
+      {
+        method: 'GET',
+        headers: getHeaders(),
+      }
+    );
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      throw result;
+    }
+
+    return result;
   },
 
   /**
@@ -201,9 +194,21 @@ export const attendanceService = {
    * @param date - Fecha de la sesión (YYYY-MM-DD)
    */
   async getSessionDetail(scheduleExternalId: string, date: string) {
-    return axios.get(`${API_URL}/attendance/v2/public/history/session/${scheduleExternalId}/${date}`, {
-      headers: getHeaders(),
-    });
+    const res = await fetchWithSession(
+      `${API_URL}/attendance/v2/public/history/session/${scheduleExternalId}/${date}`,
+      {
+        method: 'GET',
+        headers: getHeaders(),
+      }
+    );
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      throw result;
+    }
+
+    return result;
   },
 
   /**
@@ -212,16 +217,48 @@ export const attendanceService = {
    * @param date - Fecha de la sesión
    */
   async deleteAttendance(scheduleId: string, date: string) {
-    return axios.delete(`${API_URL}/attendance/session/${scheduleId}/${date}`, {
-      headers: getHeaders(),
-    });
+    const res = await fetchWithSession(
+      `${API_URL}/attendance/session/${scheduleId}/${date}`,
+      {
+        method: 'DELETE',
+        headers: getHeaders(),
+      }
+    );
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      throw result;
+    }
+
+    return result;
   },
 
-  /**
-   * Alias para eliminar asistencia (compatibilidad).
-   */
   async deleteSessionAttendance(scheduleId: string, date: string) {
     return this.deleteAttendance(scheduleId, date);
+  },
+
+  async registerAttendance(data: {
+    schedule_external_id: string;
+    date: string;
+    attendances: { participant_external_id: string; status: string }[];
+  }) {
+    const res = await fetchWithSession(
+      `${API_URL}/attendance/v2/public/register`,
+      {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+      }
+    );
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      throw result;
+    }
+
+    return result;
   },
 };
 

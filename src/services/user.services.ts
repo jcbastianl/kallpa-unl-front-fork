@@ -1,5 +1,6 @@
 import { CreateUserRequest, CreateUserResponse } from "../types/user";
 import { get, put } from "@/hooks/apiUtils";
+import { fetchWithSession } from "./fetchWithSession";
 
 const API_URL = "http://localhost:5000/api";
 
@@ -20,25 +21,18 @@ export const userService = {
     };
   },
   async createUser(data: CreateUserRequest): Promise<CreateUserResponse> {
-    try {
-      const response = await fetch(`${API_URL}/save-user`, {
-        method: "POST",
-        headers: this.getHeaders(),
-        body: JSON.stringify(data),
-      });
+    const response = await fetchWithSession(`${API_URL}/save-user`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
 
-      const result = await response.json();
-      if (!response.ok) {
-        throw result;
-      }
-
-      return result;
-    } catch (error: any) {
-      if (error instanceof TypeError && error.message.includes("Failed to fetch")) {
-        throw { type: "SERVER_DOWN" };
-      }
-      throw error;
+    const result = await response.json();
+    if (!response.ok) {
+      throw result;
     }
+
+    return result;
   },
 
   async getProfile() {

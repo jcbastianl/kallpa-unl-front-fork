@@ -44,17 +44,6 @@ export const createParticipant = async (
   return response;
 };
 
-// Crear Iniciación Deportiva (Niño + Padre - Transacción)
-export const createInitiation = async (
-  data: InitiationRequest,
-): Promise<ApiResponse<any> | undefined> => {
-  const response = await postWithAuth<ApiResponse<any>, InitiationRequest>(
-    "/users/initiation",
-    data,
-  );
-  return response;
-};
-
 // Búsqueda segura por DNI
 export const searchParticipantByDni = async (
   dni: string,

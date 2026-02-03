@@ -13,19 +13,14 @@ export default function ParticipantPage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { serverDown } = useSession();
-  
+
   const fetchData = useCallback(async () => {
     try {
       const data = await participantService.getAll();
-      if (data === undefined) {
-        window.dispatchEvent(new CustomEvent('SERVER_DOWN', {
-          detail: { message: "No se puede conectar con el servidor. Por favor intenta nuevamente más tarde." }
-        }));
-        return;
-      }
-      if (data) {
-        setParticipants(data);
-      }
+      setParticipants(data);
+    } catch (error: any) {
+      if (error?.message === "SESSION_EXPIRED" || error?.message === "SERVER_DOWN") return;
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -35,8 +30,17 @@ export default function ParticipantPage() {
     fetchData();
   }, [fetchData]);
 
+  const handleStatusChange = async (updatedParticipantId: string, newStatus: "ACTIVO" | "INACTIVO") => {
+    setParticipants((prev) =>
+      prev.map((p) =>
+        p.id === updatedParticipantId ? { ...p, status: newStatus } : p
+      )
+    );
+  };
+
+
   if (serverDown) return null;
-  
+
   if (loading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -74,7 +78,7 @@ export default function ParticipantPage() {
         />
       </div>
       <div className="space-y-10">
-        <ParticipantsTable data={participants} onStatusChange={fetchData} />
+        <ParticipantsTable data={participants} onStatusChange={handleStatusChange} />
       </div>
     </div>
   );

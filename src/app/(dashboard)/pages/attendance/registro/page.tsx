@@ -1,25 +1,14 @@
-/**
- * @module Registro de Asistencia
- * @description Página para registrar y editar la asistencia de participantes.
- * Permite seleccionar una sesión programada, una fecha y marcar el estado
- * de asistencia (presente/ausente) para cada participante.
- */
-
 "use client";
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { attendanceService } from '@/services/attendance.services';
 import type { Schedule, Participant, Program } from '@/types/attendance';
 import { Alert } from '@/components/ui-elements/alert';
 import { Button } from '@/components/ui-elements/button';
-import { extractErrorMessage, isServerDownError } from '@/utils/error-handler';
-import { useSession } from '@/context/SessionContext';
 
-/**
- * Componente de carga con spinner animado.
- */
+import { Calendar, Check, Clock, MapPin, RefreshCw, Save, Users, X } from 'lucide-react';
+
 function Loading() {
   return (
     <div className="flex items-center justify-center py-12">
@@ -28,37 +17,25 @@ function Loading() {
   );
 }
 
-/**
- * Página principal de registro de asistencia.
- * Soporta modo de creación y modo de edición de asistencia existente.
- */
 export default function Registro() {
   const searchParams = useSearchParams();
-  const { showServerDown } = useSession();
-  
-  // Estado de datos
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [allParticipants, setAllParticipants] = useState<Participant[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
-  
-  // Estado de UI
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentProgram, setCurrentProgram] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Estado de alertas
   const [showAlert, setShowAlert] = useState(false);
   const [alertVariant, setAlertVariant] = useState<'success' | 'error' | 'warning'>('success');
   const [alertTitle, setAlertTitle] = useState('');
   const [alertDescription, setAlertDescription] = useState('');
 
-  // Detectar si viene de una sesión preseleccionada
+  // Si viene de una sesión específica, no mostrar selectores
   const hasPreselectedSession = searchParams.get('session') !== null;
 
-  // Estado del formulario
   const [selectedSchedule, setSelectedSchedule] = useState(searchParams.get('session') || '');
   const [selectedDate, setSelectedDate] = useState(() => {
     const urlDate = searchParams.get('date');
@@ -68,9 +45,6 @@ export default function Registro() {
   });
   const [attendance, setAttendance] = useState<Record<string, string>>({});
 
-  /**
-   * Dispara una alerta visual en la interfaz.
-   */
   const triggerAlert = (
     variant: 'success' | 'error' | 'warning',
     title: string,
@@ -90,9 +64,13 @@ export default function Registro() {
     loadData();
   }, []);
 
-  /**
-   * Effect para recargar participantes cuando la página vuelve a estar visible.
-   */
+  useEffect(() => {
+    const sessionParam = searchParams.get('session');
+    const dateParam = searchParams.get('date');
+    if (sessionParam) setSelectedSchedule(sessionParam);
+    if (dateParam) setSelectedDate(dateParam);
+  }, [searchParams]);
+
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && currentProgram) {
@@ -106,9 +84,6 @@ export default function Registro() {
     };
   }, [currentProgram]);
 
-  /**
-   * Effect para cargar asistencia existente o inicializar estados.
-   */
   useEffect(() => {
     const sessionParam = searchParams.get('session');
     const dateParam = searchParams.get('date');
@@ -117,7 +92,6 @@ export default function Registro() {
       if (sessionParam && dateParam) {
         loadExistingAttendance(sessionParam, dateParam);
       } else {
-        // Inicializar todos como PRESENT por defecto
         const initial: Record<string, string> = {};
         participants.forEach(p => {
           initial[p.id] = 'PRESENT';
@@ -127,16 +101,11 @@ export default function Registro() {
     }
   }, [participants]);
 
-  /**
-   * Carga la asistencia existente para edición.
-   * @param scheduleId - ID del horario
-   * @param date - Fecha de la sesión
-   */
   const loadExistingAttendance = async (scheduleId: string, date: string) => {
     if (!scheduleId) return;
     try {
       const res = await attendanceService.getHistory(date, date, scheduleId);
-      const allRecords = res.data.data || [];
+      const allRecords = res.data || [];
 
       if (allRecords.length > 0) {
         setIsEditing(true);
@@ -151,7 +120,6 @@ export default function Registro() {
           }
         });
 
-        // Participantes sin registro = PRESENT por defecto
         participants.forEach(p => {
           if (!existingAttendance[p.id]) {
             existingAttendance[p.id] = 'PRESENT';
@@ -167,7 +135,6 @@ export default function Registro() {
         setAttendance(initial);
       }
     } catch (error) {
-      // Error al cargar - inicializar por defecto
       const initial: Record<string, string> = {};
       participants.forEach(p => {
         initial[p.id] = 'PRESENT';
@@ -176,20 +143,15 @@ export default function Registro() {
     }
   };
 
-  /**
-   * Carga inicial de datos: horarios y participantes.
-   */
   const loadData = async () => {
     try {
       const schedulesRes = await attendanceService.getSchedules();
 
-      // Mapeo de días inglés a español
       const dayMap: Record<string, string> = {
         'monday': 'LUNES', 'tuesday': 'MARTES', 'wednesday': 'MIERCOLES',
         'thursday': 'JUEVES', 'friday': 'VIERNES', 'saturday': 'SABADO', 'sunday': 'DOMINGO'
       };
-      
-      const rawSchedules = schedulesRes.data.data || [];
+      const rawSchedules = schedulesRes.data || [];
       const normalizedSchedules = rawSchedules.map((s: any) => ({
         ...s,
         id: s.external_id || s.id,
@@ -202,10 +164,11 @@ export default function Registro() {
       }));
       setSchedules(normalizedSchedules);
 
-      // Si hay sesión preseleccionada, cargar participantes del programa
       const sessionId = searchParams.get('session');
       if (sessionId) {
-        const selectedSched = normalizedSchedules.find((s: Schedule) => String(s.id) === sessionId);
+        const selectedSched = normalizedSchedules.find((s: Schedule) =>
+          String(s.id) === sessionId || String((s as any).external_id) === sessionId
+        );
         if (selectedSched?.program) {
           await loadParticipantsByProgram(selectedSched.program);
         } else {
@@ -215,20 +178,15 @@ export default function Registro() {
         setParticipants([]);
       }
     } catch (error) {
-      // Error silencioso
     } finally {
       setLoading(false);
     }
   };
 
-  /**
-   * Carga participantes filtrados por programa.
-   * @param program - Nombre del programa (opcional)
-   */
   const loadParticipantsByProgram = async (program?: string) => {
     try {
       const participantsRes = await attendanceService.getParticipantsByProgram(program);
-      const rawParticipants = participantsRes.data.data || [];
+      const rawParticipants = participantsRes.data || [];
       const normalizedParticipants = rawParticipants.map((p: any) => {
         const fullName = p.name || `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim();
         return {
@@ -250,14 +208,12 @@ export default function Registro() {
     }
   };
 
-  /**
-   * Recarga la lista de participantes manteniendo el estado de asistencia.
-   */
   const refreshParticipants = async () => {
     setRefreshing(true);
     try {
+      // Load participants - filtered by program if available, otherwise all
       const participantsRes = await attendanceService.getParticipantsByProgram(currentProgram || undefined);
-      const rawParticipants = participantsRes.data.data || [];
+      const rawParticipants = participantsRes.data || [];
       const normalizedParticipants = rawParticipants.map((p: any) => {
         const fullName = p.name || `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim();
         return {
@@ -268,7 +224,6 @@ export default function Registro() {
         };
       }) as Participant[];
 
-      // Mantener estado de asistencia existente, nuevos = PRESENT
       const newAttendance = { ...attendance };
       normalizedParticipants.forEach(p => {
         if (!(p.id in newAttendance)) {
@@ -280,19 +235,11 @@ export default function Registro() {
       setParticipants(normalizedParticipants);
       setAttendance(newAttendance);
     } catch (error) {
-      if (isServerDownError(error)) {
-        showServerDown(extractErrorMessage(error));
-      } else {
-        triggerAlert('error', 'Error al actualizar participantes', extractErrorMessage(error));
-      }
     } finally {
       setRefreshing(false);
     }
   };
 
-  /**
-   * Actualiza el estado de asistencia de un participante.
-   */
   const handleStatusChange = (participantId: string, status: string) => {
     setAttendance(prev => ({
       ...prev,
@@ -300,10 +247,6 @@ export default function Registro() {
     }));
   };
 
-  /**
-   * Marca todos los participantes con el mismo estado.
-   * @param status - Estado a aplicar (PRESENT/ABSENT)
-   */
   const markAll = (status: string) => {
     const newAttendance: Record<string, string> = {};
     participants.forEach(p => {
@@ -312,9 +255,6 @@ export default function Registro() {
     setAttendance(newAttendance);
   };
 
-  /**
-   * Procesa y envía el registro de asistencia al servidor.
-   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -333,7 +273,7 @@ export default function Registro() {
     try {
       const records = Object.entries(attendance).map(([participantId, status]) => ({
         participant_external_id: participantId,
-        status: status.toLowerCase()
+        status: status.toLowerCase() // Backend espera minúsculas: present, absent, justified
       }));
 
       const requestData = {
@@ -352,16 +292,13 @@ export default function Registro() {
         `Se registró la asistencia de ${records.length} participante(s) correctamente.`
       );
       setTimeout(() => setSuccess(false), 3000);
-    } catch (error: any) {
-      if (isServerDownError(error)) {
-        showServerDown(extractErrorMessage(error));
-      } else {
-        triggerAlert(
-          'error',
-          'Error al guardar',
-          extractErrorMessage(error)
-        );
-      }
+    } catch (err: any) {
+      if (err?.message === "SERVER_DOWN" || err?.message === "SESSION_EXPIRED") return;
+      triggerAlert(
+        'error',
+        'Error al guardar',
+        err?.response?.data?.message || err?.message || 'No se pudo guardar la asistencia. Intenta nuevamente.'
+      );
     } finally {
       setSaving(false);
     }
@@ -379,7 +316,9 @@ export default function Registro() {
     return parts[0]?.[0]?.toUpperCase() || '??';
   };
 
-  const selectedScheduleData = schedules.find(s => String(s.id) === selectedSchedule);
+  const selectedScheduleData = schedules.find(s =>
+    String(s.id) === selectedSchedule || String((s as any).external_id) === selectedSchedule
+  );
 
   if (loading) return <Loading />;
 
@@ -387,130 +326,109 @@ export default function Registro() {
     <div>
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
           {isEditing ? 'Editar Asistencia' : 'Registrar Asistencia'}
         </h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
-          {isEditing ? 'Modifica los registros de asistencia de esta sesión.' : 'Selecciona la sesión y registra la asistencia de los participantes.'}
-        </p>
       </div>
 
-      {/* Alert flotante centrada con animación */}
+      {/* Alert */}
       {showAlert && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4 animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="backdrop-blur-sm bg-white/95 dark:bg-gray-dark/95 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <Alert
-              variant={alertVariant}
-              title={alertTitle}
-              description={alertDescription}
-            />
-          </div>
+        <div className="mb-6">
+          <Alert
+            variant={alertVariant}
+            title={alertTitle}
+            description={alertDescription}
+          />
         </div>
       )}
 
-      <form onSubmit={handleSubmit}>
-        {/* Session Selection - Solo mostrar selectores si no viene preseleccionada */}
-        <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <span className="material-symbols-outlined text-blue-800" translate="no">event</span>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Sección: Información de la Sesión */}
+        <div className="bg-[#0f172a] dark:bg-[#0f172a] rounded-[24px] border border-gray-800 p-6 shadow-2xl">
+          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+            <Calendar size={18} className="text-blue-500" />
             Información de la Sesión
           </h2>
 
           {hasPreselectedSession && selectedScheduleData ? (
-            // Vista simplificada cuando viene de sesiones
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-blue-600" translate="no">schedule</span>
-                <div>
-                  <p className="font-semibold text-blue-800 dark:text-blue-300">{selectedScheduleData.name}</p>
-                  <p className="text-sm text-blue-600 dark:text-blue-400">
-                    {selectedScheduleData.day_of_week} • {selectedScheduleData.start_time} - {selectedScheduleData.end_time}
-                  </p>
-                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                    <strong>Fecha:</strong> {new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                  </p>
+            <div className="p-5 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex items-center gap-4">
+              <div className="size-12 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <Clock className="text-blue-500" size={24} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-white leading-tight">
+                  {selectedScheduleData.name}
+                </h3>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-gray-400">
+                  <span className="flex items-center gap-1">
+                    <span className="text-blue-500 font-bold">•</span> {selectedScheduleData.day_of_week}
+                  </span>
+                  <span>{selectedScheduleData.start_time} - {selectedScheduleData.end_time}</span>
                 </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Fecha: <span className="capitalize">{new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                </p>
               </div>
             </div>
           ) : (
-            // Mensaje para seleccionar desde Dashboard
-            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-              <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-yellow-600" translate="no">info</span>
-                <div>
-                  <p className="font-medium text-yellow-800 dark:text-yellow-300">Selecciona una sesión desde el Dashboard</p>
-                  <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                    Ve al Dashboard y haz clic en &quot;Registrar Asistencia&quot; en la sesión que deseas registrar.
-                  </p>
-                </div>
-              </div>
+            <div className="p-5 bg-orange-500/5 border border-orange-500/20 rounded-2xl text-orange-400 flex gap-3">
+              <MapPin size={20} />
+              <p className="text-sm font-medium">Selecciona una sesión desde el Dashboard para continuar.</p>
             </div>
           )}
         </div>
 
-        {/* Attendance List */}
-        <div className="bg-white dark:bg-gray-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* Sección: Lista de Participantes */}
+        <div className="bg-[#0f172a] rounded-[24px] border border-gray-800 overflow-hidden shadow-2xl">
+          <div className="p-6 border-b border-gray-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-800" translate="no">groups</span>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Users size={20} className="text-blue-500" />
                 Lista de Participantes ({participants.length})
               </h2>
-              {currentProgram && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Mostrando participantes del programa: <span className="font-medium text-blue-600">{currentProgram}</span>
-                </p>
-              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Mostrando participantes del programa: <span className="text-blue-400 font-bold">INICIACION</span>
+              </p>
             </div>
-            <div className="flex gap-2 flex-wrap">
-              <Button
-                label={refreshing ? 'Actualizando...' : 'Actualizar'}
-                variant="outlinePrimary"
-                shape="rounded"
-                size="small"
-                onClick={refreshParticipants}
-                icon={<span className={`material-symbols-outlined text-base ${refreshing ? 'animate-spin' : ''}`}>refresh</span>}
-              />
-              <Button
-                label="Todos Presentes"
-                variant="outlineGreen"
-                shape="rounded"
-                size="small"
-                onClick={() => markAll('PRESENT')}
-              />
-              <button type="button" onClick={() => markAll('ABSENT')} className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors border border-red-200">
-                Todos Ausentes
+
+            <div className="flex gap-2">
+              <button type="button" onClick={refreshParticipants} className="p-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-white transition-all flex items-center gap-2 text-sm font-bold border border-gray-700">
+                <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} /> Actualizar
+              </button>
+              <button type="button" onClick={() => markAll('PRESENT')} className="px-4 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 transition-all text-sm font-bold flex items-center gap-2">
+                <Check size={16} /> Todos Presentes
+              </button>
+              <button type="button" onClick={() => markAll('ABSENT')} className="px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 transition-all text-sm font-bold flex items-center gap-2">
+                <X size={16} /> Todos Ausentes
               </button>
             </div>
           </div>
 
-          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+          <div className="divide-y divide-gray-800">
             {participants.map(p => (
-              <div key={p.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center font-bold text-sm">
+              <div key={p.id} className="p-5 flex items-center justify-between hover:bg-white/5 transition-all group">
+                <div className="flex items-center gap-4">
+                  <div className="size-12 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-lg shadow-blue-900/20">
                     {getInitials(p.name)}
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">{p.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{p.dni || 'Sin cédula'}</p>
+                    <p className="font-bold text-white text-base group-hover:text-blue-400 transition-colors">{p.name}</p>
+                    <p className="text-xs text-gray-500 font-medium tracking-wider">ID: {p.dni || '---'}</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
+
+                <div className="flex gap-3">
                   {[
-                    { value: 'PRESENT', label: 'P', color: 'green', title: 'Presente' },
-                    { value: 'ABSENT', label: 'A', color: 'red', title: 'Ausente' },
+                    { value: 'PRESENT', label: 'P', active: 'bg-emerald-500 text-white shadow-emerald-900/50', hover: 'hover:bg-emerald-500/20 text-emerald-500' },
+                    { value: 'ABSENT', label: 'A', active: 'bg-red-500 text-white shadow-red-900/50', hover: 'hover:bg-red-500/20 text-red-500' },
                   ].map(status => (
                     <button
                       key={status.value}
                       type="button"
-                      title={status.title}
                       onClick={() => handleStatusChange(p.id, status.value)}
-                      className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${attendance[p.id] === status.value
-                        ? status.color === 'green' ? 'bg-green-500 text-white ring-2 ring-green-300' :
-                          status.color === 'red' ? 'bg-red-500 text-white ring-2 ring-red-300' :
-                            'bg-yellow-500 text-white ring-2 ring-yellow-300'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      className={`w-12 h-12 rounded-xl font-black text-sm transition-all border flex items-center justify-center ${attendance[p.id] === status.value
+                          ? `${status.active} border-transparent shadow-lg scale-110`
+                          : `bg-gray-800/50 border-gray-700 text-gray-500 ${status.hover}`
                         }`}
                     >
                       {status.label}
@@ -521,14 +439,12 @@ export default function Registro() {
             ))}
           </div>
 
-          {/* Submit Button */}
-          <div className="p-6 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          <div className="p-8 bg-gray-900/50">
             <Button
+              disabled={saving}
               label={saving ? "Guardando..." : "Guardar Asistencia"}
-              variant="primary"
+              icon={saving ? <RefreshCw className="animate-spin" size={20} /> : <Save size={20} />}
               shape="rounded"
-              className="w-full sm:w-auto !bg-blue-800 hover:!bg-blue-900"
-              icon={saving ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : <span className="material-symbols-outlined" translate="no">save</span>}
             />
           </div>
         </div>
