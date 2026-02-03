@@ -1,7 +1,6 @@
 "use client";
-import { FiCalendar, FiMessageSquare, FiMinus, FiPause, FiPlay, FiPlus, FiRotateCcw } from "react-icons/fi";
+import { FiMessageSquare, FiMinus, FiPause, FiPlay, FiPlus, FiRotateCcw } from "react-icons/fi";
 import { TestData } from "@/types/test";
-import DatePickerTwo from "@/components/FormElements/DatePicker/DatePickerTwo";
 import { TextAreaGroup } from "@/components/FormElements/InputGroup/text-area";
 import { useEffect, useState } from "react";
 
@@ -148,13 +147,6 @@ export function EvolutionTestForm({
         })}
       </div>
       <div className="space-y-6">
-        <div className="space-y-2">
-          <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 flex items-center gap-2">
-            <FiCalendar className="text-blue-500" /> Fecha de Registro
-          </label>
-          <DatePickerTwo value={date} onChange={(newDate: string) => setDate(newDate)} />
-        </div>
-
         <div className="space-y-2">
           <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 flex items-center gap-2">
             <FiMessageSquare className="text-blue-500" /> Notas de Rendimiento

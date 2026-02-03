@@ -14,7 +14,6 @@ import {
 import Modal from "../Modal/modal";
 import { getParticipants, saveAssessment } from "@/hooks/api";
 import { Participant } from "@/types/participant";
-import DatePickerTwo from "../FormElements/DatePicker/DatePickerTwo";
 import { AssessmentData } from "@/types/assessment";
 import ErrorMessage from "../FormElements/errormessage";
 import { TbArrowsVertical, TbScale } from "react-icons/tb";
@@ -238,17 +237,6 @@ export function AnthropometricForm() {
               </div>
               <ErrorMessage message={errors.participant_external_id} />
               </div>
-            </div>
-            <div className="w-full xl:w-1/2">
-              <DatePickerTwo
-                label="Fecha"
-                value={date}
-                onChange={(newDate: string) => {
-                  setDate(newDate);
-                  clearFieldError("date");
-                }}
-              />
-              <ErrorMessage message={errors.date} />
             </div>
           </div>
           <div className="relative mb-6 overflow-hidden rounded-xl border border-blue/20 bg-white/10 p-6 shadow-lg dark:border-white/10 dark:bg-[#1a2233]">
