@@ -29,6 +29,9 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.BACKEND_URL }}
+          
+      - name: Zip artifact for deployment
+        run: zip -r release.zip . -x ".git/*" ".github/*"
 
       - name: Desplegar a Azure Web App
         # Esto permite que se despliegue también desde tu rama de prueba para ver si funciona
