@@ -634,30 +634,32 @@ export default function DashboardAsistencia() {
                       <span className="text-xs font-medium truncate">{schedule.location || 'Coliseo'}</span>
                     </div>
                   </div>
-                  <Link href={`/pages/attendance/registro?session=${scheduleId}&date=${currentDate.toISOString().split('T')[0]}`}
-                    className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all"
-                  >
-                    <Check size={14} /> Registrar Asistencia
-                  </Link>
+                  <div className="flex gap-2">
+                    <Link href={`/pages/attendance/registro?session=${scheduleId}&date=${currentDate.toISOString().split('T')[0]}`}
+                      className="flex-[3] py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all"
+                    >
+                      <Check size={14} /> {isCompleted ? 'Editar Asistencia' : 'Registrar Asistencia'}
+                    </Link>
+                    <button onClick={() => handleEdit(schedule)} className="flex-1 py-2 bg-lime-500 hover:bg-lime-600 text-lime-950 dark:text-white rounded-xl flex items-center justify-center transition-all">
+                      <Edit3 size={16} />
+                    </button>
+                    <button onClick={() => handleDelete(scheduleId, schedule.name)} className="flex-1 py-2 bg-gray-50 dark:bg-gray-800 text-gray-400 hover:text-red-500 rounded-xl flex items-center justify-center transition-all border border-gray-100 dark:border-gray-700">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
-
-                <div className="flex gap-2">
-                  <Link href={`/pages/attendance/registro?session=${scheduleId}&date=${currentDate.toISOString().split('T')[0]}`}
-                    className="flex-[3] py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all"
-                  >
-                    <Check size={14} /> {isCompleted ? 'Editar Asistencia' : 'Registrar Asistencia'}
-                  </Link>
-                  <button onClick={() => handleEdit(schedule)} className="flex-1 py-2 bg-lime-500 hover:bg-lime-600 text-lime-950 dark:text-white rounded-xl flex items-center justify-center transition-all">
-                    <Edit3 size={16} />
-                  </button>
-                  <button onClick={() => handleDelete(scheduleId, schedule.name)} className="flex-1 py-2 bg-gray-50 dark:bg-gray-800 text-gray-400 hover:text-red-500 rounded-xl flex items-center justify-center transition-all border border-gray-100 dark:border-gray-700">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
             );
           })}
         </div>
+        ) : (
+          <EmptyState
+            title="No hay sesiones programadas para hoy"
+            description="Cuando programes sesiones para hoy, aparecerán en este lugar."
+            icon={Calendar}
+            actionLabel="Programar sesión"
+            onAction={() => router.push("/pages/attendance/programar")}
+          />
+        )}
       </section>
 
       {/* --- PRÓXIMAS SESIONES --- */}
@@ -694,27 +696,10 @@ export default function DashboardAsistencia() {
                     <button onClick={() => handleEdit(session)} className="flex-[4] py-2 bg-lime-500 hover:bg-lime-600 text-lime-950 dark:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all">
                       <Edit3 size={14} /> Editar
                     </button>
-                    <button onClick={() => handleDelete(session.id, session.name)} className="flex-1 py-2 bg-gray-50 dark:bg-gray-800 text-gray-400 hover:text-red-500 rounded-xl flex items-center justify-center transition-all border border-gray-100 dark:border-gray-700">
+                    <button onClick={() => handleDelete(sessionId, session.name)} className="flex-1 py-2 bg-gray-50 dark:bg-gray-800 text-gray-400 hover:text-red-500 rounded-xl flex items-center justify-center transition-all border border-gray-100 dark:border-gray-700">
                       <Trash2 size={16} />
                     </button>
                   </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-lime-50 dark:bg-lime-500/10 text-lime-600 dark:text-lime-400 flex items-center gap-1">
-                    <Calendar size={10} /> Próxima
-                  </span>
-                </div>
-
-                <div className="space-y-2 mb-4 text-gray-500 dark:text-gray-400">
-                  <div className="flex items-center gap-2 text-xs"><Clock size={14} className="text-red-400" /> {session.start_time} - {session.end_time}</div>
-                  <div className="flex items-center gap-2 text-xs"><Calendar size={14} className="text-blue-400" /> {formatShortDate(sessionDate)}</div>
-                </div>
-
-                <div className="flex gap-2">
-                  <button onClick={() => handleEdit(session)} className="flex-[4] py-2 bg-lime-500 hover:bg-lime-600 text-lime-950 dark:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all">
-                    <Edit3 size={14} /> Editar
-                  </button>
-                  <button onClick={() => handleDelete(sessionId, session.name)} className="flex-1 py-2 bg-gray-50 dark:bg-gray-800 text-gray-400 hover:text-red-500 rounded-xl flex items-center justify-center transition-all border border-gray-100 dark:border-gray-700">
-                    <Trash2 size={16} />
-                  </button>
                 </div>
               );
             })}
