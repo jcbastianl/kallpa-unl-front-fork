@@ -51,7 +51,7 @@ export default function SigninWithPassword() {
   return (
     <form onSubmit={handleSubmit}>
       {error && (
-        <div className="mb-4 rounded-lg border border-red-500/50 bg-red-900/20 p-4 text-sm text-red-500">
+        <div className="mb-4 rounded-lg border border-red-400/50 bg-red-500/10 backdrop-blur-sm p-4 text-sm text-red-300">
           {error}
         </div>
       )}
@@ -59,7 +59,7 @@ export default function SigninWithPassword() {
       <InputGroup
         type="email"
         label=""
-        className="mb-4 [&_input]:border-slate-700 [&_input]:bg-[#0f172a] [&_input]:py-[15px] [&_input]:text-white focus:[&_input]:border-[#5e5ce6]"
+        className="mb-4 [&_input]:border-white/20 [&_input]:bg-white/5 [&_input]:py-[15px] [&_input]:text-white [&_input]:placeholder-gray-400 focus:[&_input]:border-indigo-400 focus:[&_input]:bg-white/10 [&_input]:backdrop-blur-sm"
         placeholder="Ingrese su email"
         name="email"
         handleChange={handleChange}
@@ -70,7 +70,7 @@ export default function SigninWithPassword() {
       <InputGroup
         type="password"
         label=""
-        className="mb-5 [&_input]:border-slate-700 [&_input]:bg-[#0f172a] [&_input]:py-[15px] [&_input]:text-white focus:[&_input]:border-[#5e5ce6]"
+        className="mb-5 [&_input]:border-white/20 [&_input]:bg-white/5 [&_input]:py-[15px] [&_input]:text-white [&_input]:placeholder-gray-400 focus:[&_input]:border-indigo-400 focus:[&_input]:bg-white/10 [&_input]:backdrop-blur-sm"
         placeholder="Ingrese su contraseña"
         name="password"
         handleChange={handleChange}
@@ -81,7 +81,7 @@ export default function SigninWithPassword() {
         <button
           type="submit"
           disabled={loading}
-          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#5e5ce6] p-4 font-medium text-white shadow-lg shadow-indigo-500/20 transition hover:bg-opacity-90"
+          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-indigo-600 p-4 font-semibold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-700 disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {loading ? "Iniciando sesión..." : "Ingresar"}
           {loading && (

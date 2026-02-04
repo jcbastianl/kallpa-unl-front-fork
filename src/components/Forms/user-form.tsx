@@ -56,6 +56,7 @@ export const UserForm = () => {
   ) => {
     const { name, value } = e.target;
     const numericFields = ["dni", "phone"];
+    const emailPattern = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
 
     if (numericFields.includes(name)) {
       const onlyNums = value.replace(/\D/g, "");
@@ -66,7 +67,16 @@ export const UserForm = () => {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
 
+    // Limpia el error del campo editado
     setErrors((prev) => ({ ...prev, [name]: "" }));
+
+    // Validación inmediata de email (para ver "inválido" aunque falten otros campos)
+    if (name === "email") {
+      const v = String(value || "").trim();
+      if (v.length > 0 && !emailPattern.test(v)) {
+        setErrors((prev) => ({ ...prev, email: "Correo electrónico inválido" }));
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -213,7 +223,7 @@ export const UserForm = () => {
               <InputGroup
                 label="Correo Electrónico"
                 name="email"
-                type="email"
+                type="text"
                 placeholder="john@example.com"
                 value={formData.email}
                 handleChange={handleChange}

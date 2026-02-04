@@ -259,35 +259,49 @@ export function AssessmentForm({ initialData }: { initialData?: AssessmentInitia
                   <div className="hidden cursor-grab justify-center pb-3 text-slate-400 dark:text-slate-600 lg:flex">
                     ⠿
                   </div>
-                  <InputGroup
-                    label="Campo"
-                    type="text"
-                    placeholder="Ingresar nombre del ejercicio"
-                    value={exercise.name}
-                    handleChange={(e) => {
-                      const copy = [...exercises];
-                      copy[idx].name = e.target.value;
-                      setExercises(copy);
+                  <div className="flex flex-col gap-1">
+                    <InputGroup
+                      label="Campo"
+                      type="text"
+                      placeholder="Ingresar nombre del ejercicio"
+                      value={exercise.name}
+                      handleChange={(e) => {
+                        const v = e.target.value;
+                        const onlyLetters = v.replace(
+                          /[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g,
+                          ""
+                        );
 
-                      clearFieldError("exercises");
-                    }}
-                  />
-                  <Select
-                    label="Unidad"
-                    items={[
-                      { value: "repeticiones", label: "Repeticiones" },
-                      { value: "segundos", label: "Segundos" },
-                    ]}
-                    value={exercise.unit}
-                    onChange={(e) => {
-                      const copy = [...exercises];
-                      copy[idx].unit = e.target.value;
-                      setExercises(copy);
+                        const copy = [...exercises];
+                        copy[idx].name = onlyLetters;
+                        setExercises(copy);
 
-                      clearFieldError("exercises");
-                    }}
-                    placeholder="Seleccionar"
-                  />
+                        clearFieldError("exercises");
+                        clearFieldError(`exercises[${idx}].name`);
+                      }}
+                    />
+                    <ErrorMessage message={errors[`exercises[${idx}].name`]} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Select
+                      label="Unidad"
+                      items={[
+                        { value: "repeticiones", label: "Repeticiones" },
+                        { value: "segundos", label: "Segundos" },
+                      ]}
+                      value={exercise.unit}
+                      onChange={(e) => {
+                        const copy = [...exercises];
+                        copy[idx].unit = e.target.value;
+                        setExercises(copy);
+
+                        clearFieldError("exercises");
+                        clearFieldError(`exercises[${idx}].unit`);
+                      }}
+                      placeholder="Seleccionar"
+                    />
+                    <ErrorMessage message={errors[`exercises[${idx}].unit`]} />
+                  </div>
                   <div className="flex justify-end lg:justify-center lg:pb-3">
                     <button
                       type="button"
