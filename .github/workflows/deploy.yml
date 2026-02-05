@@ -54,7 +54,7 @@ jobs:
           # Configuración de rutas
           app_location: "/"
           api_location: ""
-          output_location: "" # Dejar vacío para que Azure detecte .next automáticamente
+          output_location: "out"
           # Permitir que Azure construya la app
           skip_app_build: false
           skip_api_build: true

@@ -1,5 +1,7 @@
 /** @type {import("next").NextConfig} */
 const nextConfig = {
+  // Exportación estática para Azure Static Web Apps
+  output: "export",
   // 1. Ignorar errores de ESLint durante el build (Solución para las comillas y hooks)
   eslint: {
     ignoreDuringBuilds: true,
@@ -9,6 +11,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
