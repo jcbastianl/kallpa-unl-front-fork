@@ -2,7 +2,6 @@
 # 🚀 KALLPA UNL - Frontend CI/CD Pipeline
 # =============================================================================
 # Pipeline para despliegue automático del frontend Next.js en Azure Static Web App
-# Framework: Next.js 15.1.6 | React 19.0.0 | Node 20.x LTS
 # =============================================================================
 
 name: 🎨 Frontend - Build & Deploy
@@ -32,130 +31,20 @@ env:
 
 jobs:
   # ===========================================================================
-  # 🔨 BUILD JOB
+  # 🚀 BUILD & DEPLOY JOB
   # ===========================================================================
-  build:
-    name: 🔨 Build Frontend
+  build_and_deploy:
+    name: 🚀 Build & Deploy
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     
     steps:
-      # -----------------------------------------------------------------------
-      # 📥 Checkout código
-      # -----------------------------------------------------------------------
-      - name: 📥 Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      # -----------------------------------------------------------------------
-      # 🟢 Setup Node.js con cache
-      # -----------------------------------------------------------------------
-      - name: 🟢 Setup Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
-
-      # -----------------------------------------------------------------------
-      # 📦 Cache de node_modules
-      # -----------------------------------------------------------------------
-      - name: 📦 Cache node_modules
-        uses: actions/cache@v4
-        id: cache-node-modules
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-${{ env.NODE_VERSION }}-
-            ${{ runner.os }}-node-
-
-      # -----------------------------------------------------------------------
-      # 📦 Cache de Next.js
-      # -----------------------------------------------------------------------
-      - name: 📦 Cache Next.js build
-        uses: actions/cache@v4
-        with:
-          path: |
-            .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-
-            ${{ runner.os }}-nextjs-
-
-      # -----------------------------------------------------------------------
-      # 📥 Instalar dependencias
-      # -----------------------------------------------------------------------
-      - name: 📥 Install dependencies
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: npm ci --prefer-offline --no-audit
-
-      # -----------------------------------------------------------------------
-      # 🔍 Lint (opcional pero recomendado)
-      # -----------------------------------------------------------------------
-      - name: 🔍 Run ESLint
-        run: npm run lint --if-present
-        continue-on-error: true
-
-      # -----------------------------------------------------------------------
-      # 🏗️ Build de producción
-      # -----------------------------------------------------------------------
-      - name: 🏗️ Build Next.js application
-        run: npm run build
-        env:
-          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://api.kallpa-unl.azurewebsites.net' }}
-
-      # -----------------------------------------------------------------------
-      # 📤 Upload artifact para deploy
-      # -----------------------------------------------------------------------
-      - name: 📤 Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: nextjs-build
-          path: |
-            .next
-            public
-            package.json
-            package-lock.json
-            next.config.mjs
-          retention-days: 1
-          if-no-files-found: error
-
-  # ===========================================================================
-  # 🚀 DEPLOY JOB - Azure Static Web App
-  # ===========================================================================
-  deploy-static-web-app:
-    name: 🚀 Deploy to Azure Static Web App
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production')
-    
-    environment:
-      name: ${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}
-      url: ${{ steps.deploy.outputs.static_web_app_url }}
-
-    steps:
-      # -----------------------------------------------------------------------
-      # 📥 Checkout código
-      # -----------------------------------------------------------------------
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: true
 
-      # -----------------------------------------------------------------------
-      # 📥 Download build artifact
-      # -----------------------------------------------------------------------
-      - name: 📥 Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: nextjs-build
-
-      # -----------------------------------------------------------------------
-      # 🚀 Deploy a Azure Static Web App
-      # -----------------------------------------------------------------------
-      - name: 🚀 Deploy to Azure Static Web App
+      - name: 🚀 Build & Deploy to Azure Static Web App
         id: deploy
         uses: Azure/static-web-apps-deploy@v1
         with:
@@ -165,15 +54,18 @@ jobs:
           # Configuración de rutas
           app_location: "/"
           api_location: ""
-          output_location: ".next"
-          # Configuración adicional
-          skip_app_build: true
+          output_location: "" # Dejar vacío para que Azure detecte .next automáticamente
+          # Permitir que Azure construya la app
+          skip_app_build: false
           skip_api_build: true
+        env:
+          # Inyectar variables de entorno durante el build
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://kallpa-backend-unl.azurewebsites.net/api' }}
 
   # ===========================================================================
   # 🗑️ CLEANUP JOB - Para PRs cerrados
   # ===========================================================================
-  close-pull-request:
+  close_pull_request:
     name: 🗑️ Close PR Preview
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
@@ -184,26 +76,3 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           action: "close"
-
-  # ===========================================================================
-  # 📢 NOTIFICATION JOB (opcional)
-  # ===========================================================================
-  notify:
-    name: 📢 Notify Deployment Status
-    runs-on: ubuntu-latest
-    needs: [build, deploy-static-web-app]
-    if: always() && github.event_name == 'push'
-    
-    steps:
-      - name: 📢 Deployment Summary
-        run: |
-          echo "## 🎨 Frontend Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| 🔨 Build | ${{ needs.build.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 🚀 Deploy | ${{ needs.deploy-static-web-app.result == 'success' && '✅ Success' || needs.deploy-static-web-app.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Triggered by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
