@@ -1,6 +1,8 @@
 import EditTestClient from "./client";
 
-export function generateStaticParams() {
+export const dynamicParams = false;
+
+export async function generateStaticParams() {
   return [];
 }
 
