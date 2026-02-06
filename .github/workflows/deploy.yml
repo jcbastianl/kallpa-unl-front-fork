@@ -44,24 +44,32 @@ jobs:
         with:
           submodules: true
 
-      - name: 🚀 Build & Deploy to Azure Static Web App
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🔨 Build application
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://kallpa-backend-unl.azurewebsites.net/api' }}
+
+      - name: 🚀 Deploy to Azure Static Web App
         id: deploy
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          # Configuración de rutas
-          app_location: "/"
+          app_location: "out"
           api_location: ""
-          output_location: "out"
-          # Configuración para Next.js static export
-          is_static_export: true
-          skip_app_build: false
+          output_location: ""
+          skip_app_build: true
           skip_api_build: true
-        env:
-          # Inyectar variables de entorno durante el build
-          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://kallpa-backend-unl.azurewebsites.net/api' }}
 
   # ===========================================================================
   # 🗑️ CLEANUP JOB - Para PRs cerrados

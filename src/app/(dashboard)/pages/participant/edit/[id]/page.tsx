@@ -1,17 +1,9 @@
-"use client";
-import { RegisterParticipantForm } from "@/components/Forms/register-participant-form";
-import { use } from "react";
+import EditParticipantClient from "./client";
 
-interface EditParticipantPageProps {
-  params: Promise<{ id: string }>;
+export function generateStaticParams() {
+  return [];
 }
 
-export default function EditParticipantPage({ params }: EditParticipantPageProps) {
-  const { id } = use(params);
-
-  return (
-    <div className="mx-auto w-full max-w-[1080px]">
-      <RegisterParticipantForm participantId={id} />
-    </div>
-  );
+export default function EditParticipantPage() {
+  return <EditParticipantClient />;
 }
