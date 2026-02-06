@@ -55,7 +55,8 @@ jobs:
           app_location: "/"
           api_location: ""
           output_location: "out"
-          # Permitir que Azure construya la app
+          # Configuración para Next.js static export
+          is_static_export: true
           skip_app_build: false
           skip_api_build: true
         env:
